@@ -2,40 +2,50 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List
 from pydantic import BaseModel
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.orm import selectinload
 from sqlmodel import SQLModel, Field, Relationship, select, or_
 
 from app.database import SessionDep, get_session
-from app.utils.security import fake_hash_password, generate_user_id
+from app.utils.security import generate_uid, get_password_hash
+
 
 class User(SQLModel, table=True):
-    id: Optional[str] = Field(primary_key=True, default=generate_user_id())
+    id: Optional[str] = Field(primary_key=True, default=generate_uid())
     username: str = Field(unique=True)
     full_name: str = Field()
     email: str = Field(unique=True)
     email_verified: Optional[bool] = Field(default=False)
     hashed_password: str = Field(max_length=64)
 
-    # Relationship to UserTask - fixed relationship name
     tasks: List["UserTask"] = Relationship(back_populates="user", cascade_delete=True)
 
     @classmethod
     def create_user(cls, user: "UserCreate") -> "User":
         user_dict = user.model_dump()
-        hashed_password = fake_hash_password(user_dict.pop("password"))
+        hashed_password = get_password_hash(password=user_dict.pop("password"))
         user_dict["hashed_password"] = hashed_password
         return cls(**user_dict)
 
     @classmethod
     def get_user_by_username_or_email(cls, session:SessionDep, username: str) -> Optional["User"]:
         if user := (
-                session.exec(
-                    select(cls)
-                    .where(or_(
-                        cls.username == username,
-                cls.email == username)))
-                .first()):
+            session.exec(
+                select(cls)
+                .options(selectinload(cls.tasks))
+                .where(or_(
+                    cls.username == username,
+            cls.email == username)))
+            .first()):
             return user
         return None
+
+    @classmethod
+    def get_user_with_tasks(cls, session: SessionDep, user_id: str) -> Optional["User"]:
+        return session.exec(
+            select(cls)
+            .options(selectinload(cls.tasks))
+            .where(cls.id == user_id)
+        ).first()
 
 class UserCreate(BaseModel):
     email: str
@@ -48,6 +58,7 @@ class UserRead(BaseModel):
     username: str
     full_name: str
     email: str
+    tasks: list["UserTask"]
 
 class UserTask(SQLModel, table=True):
     day: date = Field(primary_key=True)
@@ -69,11 +80,20 @@ class UserTask(SQLModel, table=True):
         task = session.query(cls).filter_by(user_id=user_id, day=task_day).first()
         if not task:
             task = cls(user_id=user_id, day=task_day)
+            session.add(task)
+            session.commit()
+            session.refresh(task)
         return task
 
     __table_args__ = (
         UniqueConstraint("day", "user_id"),
     )
+
+def get_user_tasks(session, user):
+    tasks = session.query(UserTask).filter_by(user_id=user).all()
+    return tasks
+
+
 
 
 class UserTaskCreate(BaseModel):

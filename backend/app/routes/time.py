@@ -3,7 +3,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 async def time():
     return {"time": datetime.isoformat(datetime.now())}
 
