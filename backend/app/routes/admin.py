@@ -5,7 +5,11 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
 
 from app.database import SessionDep
+from app.routes.tests import enigma
+from app.schemas.task import Task, TaskCreate, TaskAnswer
 from app.schemas.user import User, UserTask, UserRead
+from app.utils.encryption import enigma
+from app.settings import JULEKALENDER_ANSWER_KEY
 
 router = APIRouter()
 
@@ -39,3 +43,23 @@ async def get_user_task(user_id: str, session: SessionDep) -> "UserTask":
     session.commit()
     session.refresh(user_task)
     return user_task
+
+@router.post("/tasks/", response_model=Task)
+async def create_task(new_task: TaskCreate, session: SessionDep) -> Task:
+    new_task_dict: dict = new_task.model_dump()
+    answer_encrypted = enigma.encrypt_answer(txt=new_task_dict.pop("answer"))
+    print(new_task.model_dump())
+    answer = TaskAnswer(date=new_task.date, answer=answer_encrypted)
+    created_task = Task(**new_task_dict)
+    session.add(created_task)
+    session.commit()
+    session.add(answer)
+    session.commit()
+    return created_task
+
+@router.get("/tasks/today", response_model=Task)
+async def get_active_task(session: SessionDep) -> Task:
+    task = Task.get_active_task(session)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task

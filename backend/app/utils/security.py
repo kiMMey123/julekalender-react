@@ -1,16 +1,13 @@
 from datetime import timedelta, datetime, timezone
-from http.client import HTTPException
 
 from passlib.exc import InvalidTokenError
-from starlette import status
 
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from pydantic import BaseModel
 import uuid
 from passlib.context import CryptContext
 
-from app.database import SessionDep
 from app.settings import get_env_var
 
 SECRET_KEY = get_env_var("SECRET_KEY")
@@ -65,3 +62,5 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+
+

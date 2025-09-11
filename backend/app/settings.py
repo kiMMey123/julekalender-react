@@ -9,4 +9,4 @@ def get_env_var(var_name, default=None):
     env_var = environ.get(f"JULEKALENDER_{var_name}")
     return default if env_var is None else env_var
 
-JULEKALENDER_ANSWER_KEY=b'f'{get_env_var("JULEKALENDER_ANSWER_KEY")}
+JULEKALENDER_ANSWER_KEY=get_env_var("ANSWER_KEY").encode("utf-8")
