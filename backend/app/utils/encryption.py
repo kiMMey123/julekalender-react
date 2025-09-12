@@ -30,4 +30,7 @@ class Enigma(Fernet):
     def encrypt_answer(self, txt):
         return self.encrypt(bytes(txt, 'UTF-8')).decode('UTF-8')
 
+    def decrypt_answer(self, txt):
+        return self.decrypt(bytes(txt, 'UTF-8')).decode('UTF-8')
+
 enigma = Enigma(JULEKALENDER_ANSWER_KEY)

@@ -10,3 +10,5 @@ def get_env_var(var_name, default=None):
     return default if env_var is None else env_var
 
 JULEKALENDER_ANSWER_KEY=get_env_var("ANSWER_KEY").encode("utf-8")
+
+ATTEMPTS_PER_RESET = 10

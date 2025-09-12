@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables, SessionDep
-from app.routes import user, time, admin, tests
+from app.routes import user, time, admin, tests, task
 from app.schemas.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
 
@@ -53,5 +53,5 @@ app.add_middleware(
 
 app.include_router(time.router, prefix="/time", tags=["time"])
 app.include_router(user.router, prefix="/user", tags=["user"])
+app.include_router(task.router, prefix="/task", tags=["task"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
-app.include_router(tests.router, prefix="/tests", tags=["test"])

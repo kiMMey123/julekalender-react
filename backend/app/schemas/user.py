@@ -1,16 +1,20 @@
 from datetime import datetime, date, timedelta
 
-from typing import Optional, List, Annotated
+from typing import Optional, List, Annotated, Literal
 
+import pydantic
 from fastapi import HTTPException
 from fastapi.params import Depends
 from pydantic import BaseModel
 from sqlalchemy import UniqueConstraint, Column, JSON
-from sqlalchemy.orm import selectinload
-from sqlmodel import SQLModel, Field, Relationship, select, or_
+from sqlalchemy.orm import attributes
+from sqlmodel import SQLModel, Field, Relationship, select, or_, Session
 from starlette import status
 
-from app.database import SessionDep, get_session
+from app.database import SessionDep, get_session, session_scope
+from app.settings import ATTEMPTS_PER_RESET
+
+from app.schemas.task import TaskHint
 from app.utils.security import generate_uid, get_password_hash, oauth2_scheme, decode_payload
 
 
@@ -56,6 +60,7 @@ class UserRead(BaseModel):
     email: str
     # tasks: List["UserTask"]
 
+
 class UserTask(SQLModel, table=True):
     day: date = Field(primary_key=True)
     user_id: str = Field(foreign_key="user.id", primary_key=True)
@@ -63,16 +68,15 @@ class UserTask(SQLModel, table=True):
     time_solved: Optional[datetime] = Field(default=None)
     score: int = Field(default=0)
     hints_used: int = Field(default=0)
-    attempts_left: int = Field(default=5)
+    attempts_left: int = Field(default=ATTEMPTS_PER_RESET)
     attempts_reset: Optional[datetime] = Field(default=None)
-    answers: list[str] | None = Field(default=None, sa_column=Column(JSON))
+    attempts: list[str] = Field(default=[], sa_column=Column(JSON))
     user: User = Relationship(back_populates="tasks")
 
     @classmethod
-    def get_or_create_daily_task(cls, session, user_id: str, task_day: date = None):
+    def get_or_create_daily_task(cls, user_id: str, session: Session, task_day: date = None):
         if task_day is None:
             task_day = date.today()
-
         task = session.query(cls).filter_by(user_id=user_id, day=task_day).first()
         if not task:
             task = cls(user_id=user_id, day=task_day)
@@ -80,6 +84,37 @@ class UserTask(SQLModel, table=True):
             session.commit()
             session.refresh(task)
         return task
+
+    def add_attempt(self, text:str, session) -> str:
+        if text.strip().lower() in self.attempts:
+            message = "duplicate"
+        elif self.attempts_left <= 0:
+            if self.attempts_reset is not None:
+                if datetime.now() >= self.attempts_reset:
+                    self.attempts_left = ATTEMPTS_PER_RESET - 1
+                    self.attempts_reset = None
+
+            message = "no_attempts"
+        else:
+            self.attempts.append(text.strip().lower())
+
+            if self.attempts_left <= 0:
+                self.attempts_reset = datetime.now() + timedelta(hours=1)
+            attributes.flag_modified(self, 'attempts')
+            message = "ok"
+
+        session.add(self)
+        session.commit()
+        session.refresh(self)
+        return message
+
+
+    def set_solved(self, session):
+        self.solved = True
+        self.time_solved = datetime.now()
+
+
+
 
     __table_args__ = (
         UniqueConstraint("day", "user_id"),
@@ -94,14 +129,6 @@ class UserTaskCreate(BaseModel):
     day: date
     user_id: int
     attempts_left: int = 5
-
-class UserTaskUpdate(BaseModel):
-    solved: Optional[bool] = None
-    time_solved: Optional[datetime] = None
-    score: Optional[int] = None
-    hints_used: Optional[int] = None
-    attempts_left: Optional[int] = None
-    attempts_reset: Optional[datetime] = None
 
 
 async def get_current_user(session:SessionDep, token: Annotated[str, Depends(oauth2_scheme)]):

@@ -38,3 +38,4 @@ build/
 instance/
 *.db
 /backend/.env
+todo.txt

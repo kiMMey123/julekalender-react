@@ -45,5 +45,5 @@ async def get_todays_tasks(
         user: Annotated[User, Depends(get_current_user)],
         session: SessionDep,
 ):
-    task = UserTask.get_or_create_daily_task(session=session, user_id=user.id)
+    task = UserTask.get_or_create_daily_task(user_id=user.id, session=session)
     return task
