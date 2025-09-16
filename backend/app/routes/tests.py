@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from app.settings import JULEKALENDER_ANSWER_KEY
 from app.utils.encryption import Enigma
 from app.database import SessionDep
-from app.schemas.user import User, UserCreate, UserTask, UserRead, get_user_tasks, get_current_user
+from app.schemas.user import User, UserCreate, TaskTracker, UserRead, get_user_task_trackers, get_current_user
 
 from typing import Annotated
 from fastapi.params import Depends

@@ -12,7 +12,7 @@ from app.settings import get_env_var
 
 SECRET_KEY = get_env_var("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 180
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

@@ -1,4 +1,5 @@
-from datetime import datetime, date, timedelta
+import datetime
+from enum import Enum
 
 from typing import Optional, List, Annotated, Literal
 
@@ -14,8 +15,18 @@ from starlette import status
 from app.database import SessionDep, get_session, session_scope
 from app.settings import ATTEMPTS_PER_RESET
 
-from app.schemas.task import TaskHint
+from app.schemas.task import TaskHint, Task
 from app.utils.security import generate_uid, get_password_hash, oauth2_scheme, decode_payload
+
+scores_per_hint = {
+    0: 10,
+    1: 7,
+    2: 5,
+    3: 3,
+    4: 2,
+    5: 1
+}
+
 
 
 class User(SQLModel, table=True):
@@ -25,7 +36,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True)
     email_verified: Optional[bool] = Field(default=False)
     hashed_password: str = Field(max_length=64)
-    tasks: List["UserTask"] = Relationship(back_populates="user", cascade_delete=True)
+    results: List["TaskTracker"] = Relationship(back_populates="user", cascade_delete=True)
 
     @classmethod
     def create_user(cls, user: "UserCreate") -> "User":
@@ -46,7 +57,6 @@ class User(SQLModel, table=True):
             return user
         return None
 
-
 class UserCreate(BaseModel):
     email: str
     full_name: str
@@ -58,77 +68,96 @@ class UserRead(BaseModel):
     username: str
     full_name: str
     email: str
-    # tasks: List["UserTask"]
 
 
-class UserTask(SQLModel, table=True):
-    day: date = Field(primary_key=True)
+class TaskTracker(SQLModel, table=True):
+    date: datetime.date = Field(primary_key=True)
     user_id: str = Field(foreign_key="user.id", primary_key=True)
     solved: bool = Field(default=False)
-    time_solved: Optional[datetime] = Field(default=None)
+    time_solved: Optional[datetime.datetime] = Field(default=None)
     score: int = Field(default=0)
     hints_used: int = Field(default=0)
     attempts_left: int = Field(default=ATTEMPTS_PER_RESET)
-    attempts_reset: Optional[datetime] = Field(default=None)
+    attempts_reset: Optional[datetime.datetime] = Field(default=None)
     attempts: list[str] = Field(default=[], sa_column=Column(JSON))
-    user: User = Relationship(back_populates="tasks")
+    user: User = Relationship(back_populates="results")
+
+    __table_args__ = (
+        UniqueConstraint("date", "user_id"),
+    )
 
     @classmethod
-    def get_or_create_daily_task(cls, user_id: str, session: Session, task_day: date = None):
-        if task_day is None:
-            task_day = date.today()
-        task = session.query(cls).filter_by(user_id=user_id, day=task_day).first()
+    def get_or_create_daily_task_tracker(cls, user_id: str, session: Session, task_date: datetime.date = None):
+        if task_date is None:
+            task_date = datetime.date.today()
+        task = session.exec(select(cls).filter_by(user_id=user_id, date=task_date)).first()
         if not task:
-            task = cls(user_id=user_id, day=task_day)
+            task = cls(user_id=user_id, date=task_date)
             session.add(task)
             session.commit()
             session.refresh(task)
         return task
 
-    def add_attempt(self, text:str, session) -> str:
-        if text.strip().lower() in self.attempts:
+    def check_attempt(self, text:str, task: Task, session) -> str:
+        if self.solved:
+            message = "solved"
+        elif text.strip().lower() in self.attempts:
             message = "duplicate"
         elif self.attempts_left <= 0:
             if self.attempts_reset is not None:
-                if datetime.now() >= self.attempts_reset:
-                    self.attempts_left = ATTEMPTS_PER_RESET - 1
+                if datetime.datetime.now() >= self.attempts_reset:
+                    self.attempts_left = ATTEMPTS_PER_RESET
                     self.attempts_reset = None
-
-            message = "no_attempts"
+                    message = self.check_attempt(text, task, session)
+                else:
+                    message = "no_attempts"
         else:
             self.attempts.append(text.strip().lower())
+            self.attempts_left -= 1
 
             if self.attempts_left <= 0:
-                self.attempts_reset = datetime.now() + timedelta(hours=1)
-            attributes.flag_modified(self, 'attempts')
-            message = "ok"
+                self.attempts_reset = datetime.datetime.now() + datetime.timedelta(seconds=30)
 
-        session.add(self)
-        session.commit()
-        session.refresh(self)
+            attributes.flag_modified(self, 'attempts')
+
+            if task.check_answer(text=text, session=session):
+                self.solved = True
+                self.time_solved = datetime.datetime.now()
+                self.score = scores_per_hint[self.hints_used]
+
+                message = "correct"
+            else:
+                message = "incorrect"
+
+        if message not in ["solved", "duplicate", "no_attempts"]:
+            session.add(self)
+            session.commit()
+            session.refresh(self)
+
         return message
 
 
-    def set_solved(self, session):
-        self.solved = True
-        self.time_solved = datetime.now()
+class UserAnswerAttempt(pydantic.BaseModel):
+    date: datetime.date
+    text: str
+
+class UserAnswerReply(pydantic.BaseModel):
+    message: str
+    text: str
+    date: datetime.date
+    user_id: str
+    solved: bool
+    time_solved: Optional[datetime.datetime]
+    score: int
+    hints_used: int
+    attempts_left: int
+    attempts_reset: Optional[datetime.datetime]
+    attempts: list[str]
 
 
-
-
-    __table_args__ = (
-        UniqueConstraint("day", "user_id"),
-    )
-
-def get_user_tasks(session, user):
-    tasks = session.query(UserTask).filter_by(user_id=user).all()
-    return tasks
-
-
-class UserTaskCreate(BaseModel):
-    day: date
-    user_id: int
-    attempts_left: int = 5
+def get_user_task_trackers(session, user):
+    trackers = session.query(TaskTracker).filter_by(user_id=user).all()
+    return trackers
 
 
 async def get_current_user(session:SessionDep, token: Annotated[str, Depends(oauth2_scheme)]):
@@ -144,3 +173,4 @@ async def get_current_user(session:SessionDep, token: Annotated[str, Depends(oau
             raise credentials_exception
         return user
     raise credentials_exception
+

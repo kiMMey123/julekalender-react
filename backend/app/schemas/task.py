@@ -2,6 +2,7 @@ import datetime
 
 import pydantic
 from pydantic import HttpUrl, field_serializer
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship, select, Session
 from typing import Optional, List, Literal
 
@@ -29,14 +30,13 @@ class Task(SQLModel, table=True):
     @classmethod
     def get_active_task(cls, session: Session) -> Optional["Task"]:
         today = datetime.date.today()
-        task = session.query(cls).filter_by(date=today).first()
+        task = session.exec(select(cls).where(cls.date == today)).first()
         return task
 
     def check_answer(self, text, session) -> bool:
         return enigma.compare_answer(text, self.answer.text)
 
 class TaskCreate(pydantic.BaseModel):
-    date: datetime.date
     info: str
     media: MediaTypes
     media_url: Optional[HttpUrl]
@@ -46,19 +46,33 @@ class TaskCreate(pydantic.BaseModel):
 
     def to_task_dict(self) -> dict:
         data = self.model_dump()
-        if self.media_url:
+        if self.media_url is not None:
             data["media_url"] = self.media_url.unicode_string()
-        if self.yt_url:
-            data["yt_url"] = self.media_url.unicode_string()
+        else:
+            data["media_url"] = ""
+
+        if self.yt_url is not None:
+            data["yt_url"] = self.yt_url.unicode_string()
+        else:
+            data["yt_url"] = ""
         return data
 
 class TaskHint(SQLModel, table=True):
-    date: datetime.date = Field(primary_key=True, unique=True, foreign_key="task.date")
+    date: datetime.date = Field(primary_key=True, foreign_key="task.date")
     info: Optional[str] = Field(nullable=True)
     media: MediaTypes = Field(nullable=False)
     media_url: Optional[str] = Field(nullable=True)
-    hint_number: int = Field(primary_key=True, unique=True, nullable=False)
+    hint_number: int = Field(primary_key=True, nullable=False, le=5)
     task: Task = Relationship(back_populates="hints")
+
+    __table_args__ = (
+        UniqueConstraint("date", "hint_number"),
+    )
+
+class TaskHintCreate(pydantic.BaseModel):
+    info: Optional[str]
+    media: MediaTypes
+    media_url: Optional[str]
 
 
 class TaskAnswer(SQLModel, table=True):
@@ -66,14 +80,4 @@ class TaskAnswer(SQLModel, table=True):
     text: str = Field(nullable=False)
     task: Task = Relationship(back_populates="answer")
 
-class UserAnswer(pydantic.BaseModel):
-    date: datetime.date = pydantic.Field(default=datetime.date.today(), frozen=True)
-    text: str
 
-class UserTaskAttempt(UserAnswer):
-    duplicate: bool = pydantic.Field(default=False)
-    correct: bool = pydantic.Field(default=False)
-    allowed: bool = pydantic.Field(default=True)
-    attempts_left: int = pydantic.Field(default=0)
-    reset: Optional[str] = pydantic.Field(default=None)
-    message: Optional[str] = pydantic.Field(default=None)

@@ -7,17 +7,33 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables, SessionDep
-from app.routes import user, time, admin, tests, task
+from app.routes import user, time, admin_users, tests, task, admin_task
 from app.schemas.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
+
+from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+# The task to run
+def my_secondly_task():
+    print(f"Task is running at {datetime.now()}")
+    # ... additional task code goes here ...
+
+scheduler = BackgroundScheduler()
+trigger = CronTrigger(second=0)
+
 
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     create_db_and_tables()
+    scheduler.add_job(my_secondly_task, trigger)
+    scheduler.start()
     print("startup")
     yield
     print("shutdown")
+    scheduler.shutdown()
 
 app = FastAPI(lifespan=app_lifespan)
 
@@ -54,4 +70,5 @@ app.add_middleware(
 app.include_router(time.router, prefix="/time", tags=["time"])
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(task.router, prefix="/task", tags=["task"])
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(admin_users.router, prefix="/admin/user", tags=["Admin Users"])
+app.include_router(admin_task.router, prefix="/admin/task", tags=["Admin Tasks"])
