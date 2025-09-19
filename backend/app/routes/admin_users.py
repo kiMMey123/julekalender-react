@@ -5,7 +5,6 @@ from sqlmodel import select
 from starlette import status
 
 from app.database import SessionDep, session_scope
-from app.routes.tests import enigma
 from app.schemas.task import Task, TaskCreate, TaskAnswer
 from app.schemas.user import User, TaskTracker, UserRead
 from app.utils.encryption import enigma

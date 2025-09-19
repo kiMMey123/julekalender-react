@@ -17,18 +17,20 @@ async def get_current_task(session: SessionDep):
     task = Task.get_active_task(session)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    if not task.is_active:
+        raise HTTPException(status_code=403, detail="No active task")
     return task
 
 @router.post("/answer", response_model=UserAnswerReply)
 async def answer_task(
     user: Annotated[User, Depends(get_current_user)],
     task: Annotated[Task, Depends(get_current_task)],
-    answer: UserAnswerAttempt
+    answer: str
 ):
     try:
         with session_scope() as session:
             task_tracker = TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session)
-            answer_txt = answer.text.strip().lower()
+            answer_txt = answer.strip().lower()
             # task = Task.get_active_task(session=session)
             attempt_result = task_tracker.check_attempt(text=answer_txt, task=task, session=session)
 
@@ -36,7 +38,7 @@ async def answer_task(
                 raise HTTPException(status_code=400, detail={
                     "type": "duplicate",
                     "message": "input is a duplicate from previous attempt",
-                    "input": answer.text
+                    "input": answer
                 })
             elif attempt_result == "no_attempts":
                 raise HTTPException(status_code=429, detail={"type": "attempt", "time": task_tracker.attempts_reset.isoformat()})

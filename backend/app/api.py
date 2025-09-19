@@ -4,10 +4,11 @@ from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables, SessionDep
-from app.routes import user, time, admin_users, tests, task, admin_task
+from app.routes import user, time, admin_users, task, admin_task, media
 from app.schemas.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
 
@@ -28,8 +29,8 @@ trigger = CronTrigger(second=0)
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     create_db_and_tables()
-    scheduler.add_job(my_secondly_task, trigger)
-    scheduler.start()
+    # scheduler.add_job(my_secondly_task, trigger)
+    # scheduler.start()
     print("startup")
     yield
     print("shutdown")
@@ -70,5 +71,8 @@ app.add_middleware(
 app.include_router(time.router, prefix="/time", tags=["time"])
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(task.router, prefix="/task", tags=["task"])
+app.include_router(media.router, prefix="/media", tags=["media"])
 app.include_router(admin_users.router, prefix="/admin/user", tags=["Admin Users"])
 app.include_router(admin_task.router, prefix="/admin/task", tags=["Admin Tasks"])
+
+# app.mount("/files", StaticFiles(directory="files", html=False), name="files")

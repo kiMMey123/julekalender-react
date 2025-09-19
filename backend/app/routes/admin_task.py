@@ -6,7 +6,6 @@ from sqlmodel import select
 from starlette import status
 
 from app.database import SessionDep, session_scope
-from app.routes.tests import enigma
 from app.schemas.task import Task, TaskCreate, TaskAnswer, TaskHint, TaskHintCreate
 from app.schemas.user import User, TaskTracker, UserRead
 from app.utils.encryption import enigma
@@ -15,7 +14,9 @@ router = APIRouter()
 
 @router.post("/{date}/", response_model=Task)
 async def create_task(date: datetime.date, new_task: TaskCreate) -> Task:
-    new_task_dict: dict =  new_task.to_task_dict()
+    if new_task.open_time <= new_task.end_time:
+        raise HTTPException(status_code=422, detail="close time cannot be ")
+    new_task_dict: dict =  new_task.to_task_dict(date)
 
     answer_encrypted = enigma.encrypt_answer(txt=new_task_dict.pop("answer"))
     answer = TaskAnswer(date=date, text=answer_encrypted)
@@ -29,7 +30,7 @@ async def create_task(date: datetime.date, new_task: TaskCreate) -> Task:
     return created_task
 
 @router.delete("/{date}/", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(date: str):
+async def delete_task(date: str = datetime.date.today()):
     with session_scope() as session:
         task = session.exec(select(Task).where(Task.date == date)).first()
         print(task)

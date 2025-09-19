@@ -12,3 +12,12 @@ def get_env_var(var_name, default=None):
 JULEKALENDER_ANSWER_KEY=get_env_var("ANSWER_KEY").encode("utf-8")
 
 ATTEMPTS_PER_RESET = 10
+
+SCORES_PER_HINT_USED = {
+    0: 10,
+    1: 7,
+    2: 5,
+    3: 3,
+    4: 2,
+    5: 1
+}

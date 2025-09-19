@@ -13,20 +13,10 @@ from sqlmodel import SQLModel, Field, Relationship, select, or_, Session
 from starlette import status
 
 from app.database import SessionDep, get_session, session_scope
-from app.settings import ATTEMPTS_PER_RESET
+from app.settings import ATTEMPTS_PER_RESET, SCORES_PER_HINT_USED
 
 from app.schemas.task import TaskHint, Task
 from app.utils.security import generate_uid, get_password_hash, oauth2_scheme, decode_payload
-
-scores_per_hint = {
-    0: 10,
-    1: 7,
-    2: 5,
-    3: 3,
-    4: 2,
-    5: 1
-}
-
 
 
 class User(SQLModel, table=True):
@@ -123,7 +113,7 @@ class TaskTracker(SQLModel, table=True):
             if task.check_answer(text=text, session=session):
                 self.solved = True
                 self.time_solved = datetime.datetime.now()
-                self.score = scores_per_hint[self.hints_used]
+                self.score = SCORES_PER_HINT_USED[self.hints_used]
 
                 message = "correct"
             else:
