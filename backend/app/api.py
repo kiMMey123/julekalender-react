@@ -34,7 +34,7 @@ async def app_lifespan(app: FastAPI):
     print("startup")
     yield
     print("shutdown")
-    scheduler.shutdown()
+    # scheduler.shutdown()
 
 app = FastAPI(lifespan=app_lifespan)
 

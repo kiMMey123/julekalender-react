@@ -16,6 +16,7 @@ from app.database import SessionDep, get_session, session_scope
 from app.settings import ATTEMPTS_PER_RESET, SCORES_PER_HINT_USED
 
 from app.schemas.task import TaskHint, Task
+from app.utils.input import string_washer
 from app.utils.security import generate_uid, get_password_hash, oauth2_scheme, decode_payload
 
 
@@ -77,9 +78,7 @@ class TaskTracker(SQLModel, table=True):
     )
 
     @classmethod
-    def get_or_create_daily_task_tracker(cls, user_id: str, session: Session, task_date: datetime.date = None):
-        if task_date is None:
-            task_date = datetime.date.today()
+    def get_or_create_daily_task_tracker(cls, user_id: str, session: Session, task_date: datetime.date = datetime.date.today()):
         task = session.exec(select(cls).filter_by(user_id=user_id, date=task_date)).first()
         if not task:
             task = cls(user_id=user_id, date=task_date)
@@ -89,9 +88,12 @@ class TaskTracker(SQLModel, table=True):
         return task
 
     def check_attempt(self, text:str, task: Task, session) -> str:
+        text = string_washer(text)
+        message = "incorrect"
+
         if self.solved:
             message = "solved"
-        elif text.strip().lower() in self.attempts:
+        elif text in self.attempts:
             message = "duplicate"
         elif self.attempts_left <= 0:
             if self.attempts_reset is not None:
@@ -101,8 +103,9 @@ class TaskTracker(SQLModel, table=True):
                     message = self.check_attempt(text, task, session)
                 else:
                     message = "no_attempts"
+
         else:
-            self.attempts.append(text.strip().lower())
+            self.attempts.append(text)
             self.attempts_left -= 1
 
             if self.attempts_left <= 0:
@@ -110,14 +113,12 @@ class TaskTracker(SQLModel, table=True):
 
             attributes.flag_modified(self, 'attempts')
 
-            if task.check_answer(text=text, session=session):
+            if task.check_answer(text=text):
                 self.solved = True
                 self.time_solved = datetime.datetime.now()
                 self.score = SCORES_PER_HINT_USED[self.hints_used]
-
                 message = "correct"
-            else:
-                message = "incorrect"
+
 
         if message not in ["solved", "duplicate", "no_attempts"]:
             session.add(self)
@@ -143,7 +144,6 @@ class UserAnswerReply(pydantic.BaseModel):
     attempts_left: int
     attempts_reset: Optional[datetime.datetime]
     attempts: list[str]
-
 
 def get_user_task_trackers(session, user):
     trackers = session.query(TaskTracker).filter_by(user_id=user).all()

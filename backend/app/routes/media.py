@@ -1,50 +1,57 @@
 import datetime
+import os
+from typing import Annotated
 
-import fastapi.staticfiles
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import select, and_
+from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.params import Depends
+from sqlmodel import select
 from starlette.responses import FileResponse
 
-from app.database import SessionDep, session_scope
-from app.schemas.task import  Task, TaskHint
-from app.schemas.user import User, TaskTracker, UserAnswerAttempt, UserAnswerReply, get_current_user
-
-from typing import Annotated, Optional
-from fastapi.params import Depends
-
-import os
+from app.database import session_scope
+from app.schemas.task import Task, TaskMedia
+from app.schemas.user import User, get_current_user
 
 router = APIRouter()
 
+
 @router.post("/upload/")
-async def upload_file(file: UploadFile):
+async def upload_file(file: UploadFile, date: datetime.date, hint_number: int = 0):
     files_dir = "..\\files"
     os.makedirs(files_dir, exist_ok=True)
-    filename = file.filename
-    file_path = os.path.join(files_dir, filename)
-    with open(file_path, "wb") as f:
-        while contents := await file.read(1024 * 1024):
-            f.write(contents)
+    task_media = TaskMedia.create_media_dict(file, date, hint_number)
+    file_path = os.path.join(files_dir, task_media.file_name)
+
+    with session_scope() as session:
+        if Task.get_task(session, date) is None:
+            raise HTTPException(400, detail=f'Task on date {date} does not exist')
+        with open(file_path, "wb") as f:
+            while contents := await file.read(1024 * 1024):
+                f.write(contents)
+        session.add(task_media)
+        session.commit()
+        session.refresh(task_media)
+
+        return task_media
 
 
-    return {"filename": file.filename, "file_size": file.size, "location": file_path}
-
-@router.get("/download/{filename}")
+@router.get("/download/{file_name}")
 async def download_file(
-        filename: str,
-        user: Annotated[User, Depends(get_current_user)]
+        file_name: str,
+        user: Annotated[User, Depends(get_current_user)],
 ):
+    with session_scope() as session:
+        media = session.exec(select(TaskMedia).where(TaskMedia.file_name == file_name)).first()
+
+        if not media:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        if media.is_locked(user, session):
+            raise HTTPException(status_code=403, detail="File not accessible")
+
     files_dir = "..\\files"
-    file_path = os.path.join(files_dir, filename)
+    file_path = os.path.join(files_dir, file_name)
     if not os.path.exists(file_path):
         return HTTPException(status_code=404, detail="File not found")
     else:
-        media_types = {
-            "jpg": "image/jpeg",
-            "png": "image/png",
-            "mp3": "audio/mpeg",
-            "md": "text/markdown",
-        }
-        media_type = media_types.get(filename.split(".")[-1], "application/octet-stream")
-        return FileResponse(file_path, media_type=media_type)
+
+        return FileResponse(file_path, media_type=media.media_type)

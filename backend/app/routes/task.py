@@ -14,10 +14,10 @@ from fastapi.params import Depends
 router = APIRouter()
 
 async def get_current_task(session: SessionDep):
-    task = Task.get_active_task(session)
+    task = Task.get_task(session)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if not task.is_active:
+    if not task.status == "active":
         raise HTTPException(status_code=403, detail="No active task")
     return task
 
@@ -31,7 +31,6 @@ async def answer_task(
         with session_scope() as session:
             task_tracker = TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session)
             answer_txt = answer.strip().lower()
-            # task = Task.get_active_task(session=session)
             attempt_result = task_tracker.check_attempt(text=answer_txt, task=task, session=session)
 
             if attempt_result == "duplicate":
