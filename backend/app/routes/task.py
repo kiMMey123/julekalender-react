@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select, and_
 
 from app.database import SessionDep, session_scope
-from app.schemas.task import  Task, TaskHint
+from app.schemas.task import Task, TaskHint, TaskUserRead
 from app.schemas.user import User, TaskTracker, UserAnswerAttempt, UserAnswerReply, get_current_user
 
 from typing import Annotated, Optional
@@ -20,6 +20,10 @@ async def get_current_task(session: SessionDep):
     if not task.status == "active":
         raise HTTPException(status_code=403, detail="No active task")
     return task
+
+@router.get("/{date}", response_model=TaskUserRead)
+async def get_task_by_date(date: datetime.date):
+    pass
 
 @router.post("/answer", response_model=UserAnswerReply)
 async def answer_task(

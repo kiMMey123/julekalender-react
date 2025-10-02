@@ -49,8 +49,6 @@ class Task(SQLModel, table=True):
         admin_task_dict["media"] = self.media
         admin_task_dict["hints"] = self.hints
 
-        print(admin_task_dict)
-
         return TaskAdminRead(**admin_task_dict)
 
     def check_answer(self, text) -> bool:
@@ -84,13 +82,15 @@ class TaskUpdate(pydantic.BaseModel):
     close_time: Optional[int] = pydantic.Field(default=23, gt=19, le=23)
     yt_url: Optional[HttpUrl]
 
-
-class TaskAdminRead(pydantic.BaseModel):
+class TaskUserRead(pydantic.BaseModel):
     date: datetime.date
     open_time: datetime.datetime
     close_time: datetime.datetime
     info: str
     status: str
+
+
+class TaskAdminRead(TaskUserRead):
     answer_plaintext: str
     answer: dict
     hints: Optional[List["TaskHint"]]
@@ -116,7 +116,6 @@ class TaskAnswer(SQLModel, table=True):
     text: str = Field(nullable=False)
     task: Task = Relationship(back_populates="answer")
     yt_url: Optional[str]
-
 
 def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date):
     try:
@@ -161,8 +160,6 @@ def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date):
 
     except IntegrityError as e:
         raise HTTPException(status_code=422, detail=str(e))
-
-
 
 class MediaTypes(str, Enum):
     PNG = "image/png"
