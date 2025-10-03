@@ -7,8 +7,8 @@ from sqlmodel import SQLModel, Field, Relationship
 if TYPE_CHECKING:
     from app.models.task import Task
     from app.models.user import TaskTracker
-    from app.utils.security import generate_uid
 
+from app.utils.security import generate_uid
 
 class MediaTypes(str, Enum):
     PNG = "image/png"
