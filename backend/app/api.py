@@ -7,9 +7,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-from app.database import create_db_and_tables, SessionDep
+from app.database import create_db_and_tables
 from app.routes import user, time, admin_users, task, admin_task, media
-from app.schemas.user import User
+from app.models.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
 
 from datetime import datetime
@@ -25,7 +25,6 @@ scheduler = BackgroundScheduler()
 trigger = CronTrigger(second=0)
 
 
-
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     create_db_and_tables()
@@ -39,8 +38,8 @@ async def app_lifespan(app: FastAPI):
 app = FastAPI(lifespan=app_lifespan)
 
 @app.post("/token")
-async def login(session:SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    this_user = User.get_user_by_username_or_email(session, form_data.username)
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    this_user = User.get_user_by_username_or_email(form_data.username)
 
     if not this_user:
         raise HTTPException(
@@ -74,5 +73,3 @@ app.include_router(task.router, prefix="/task", tags=["task"])
 app.include_router(media.router, prefix="/media", tags=["media"])
 app.include_router(admin_users.router, prefix="/admin/user", tags=["Admin Users"])
 app.include_router(admin_task.router, prefix="/admin/task", tags=["Admin Tasks"])
-
-# app.mount("/files", StaticFiles(directory="files", html=False), name="files")

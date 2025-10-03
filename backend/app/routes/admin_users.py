@@ -4,9 +4,11 @@ from fastapi import APIRouter, Query, HTTPException
 from sqlmodel import select
 from starlette import status
 
-from app.database import SessionDep, session_scope
-from app.schemas.task import Task, TaskCreate, TaskAnswer
-from app.schemas.user import User, TaskTracker, UserRead
+from app.database import session_scope
+from app.schemas.task import TaskCreate
+from app.models.task import Task, TaskAnswer
+from app.schemas.user import UserRead
+from app.models.user import User, TaskTracker
 from app.utils.encryption import enigma
 
 router = APIRouter()

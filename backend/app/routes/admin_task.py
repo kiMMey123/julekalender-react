@@ -6,10 +6,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from starlette import status
 
-from app.database import SessionDep, session_scope
-from app.schemas.task import Task, TaskCreate, TaskUpdate, TaskAnswer, TaskHint, TaskHintCreate, create_or_update_task, \
-    TaskAdminRead
-from app.schemas.user import User, TaskTracker, UserRead
+from app.database import session_scope
+from app.schemas.task import TaskCreate, TaskUpdate, TaskHintCreate, TaskAdminRead
+from app.models.task import Task, TaskHint, TaskAnswer, create_or_update_task
+from app.schemas.user import UserRead
+from app.models.user import User, TaskTracker
 from app.utils.encryption import enigma
 
 router = APIRouter()
@@ -18,13 +19,13 @@ router = APIRouter()
 async def get_task(date: datetime.date) -> dict:
     with session_scope() as session:
         if task := session.exec(select(Task).where(Task.date == date)).first():
-            return task.to_admin_dict()
+            return task.get_admin_task()
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
 
 @router.post("/{date}/", response_model=TaskAdminRead)
-async def create_task(date: datetime.date, new_task: TaskCreate) -> dict:
+async def create_task(date: datetime.date, new_task: TaskCreate) -> TaskAdminRead:
     if new_task.open_time >= new_task.close_time:
         raise HTTPException(status_code=422, detail="close time must be after open time")
 
@@ -32,7 +33,7 @@ async def create_task(date: datetime.date, new_task: TaskCreate) -> dict:
 
 
 @router.patch("/{date}/", response_model=TaskAdminRead)
-async def update_task(date: datetime.date, updated_task: TaskUpdate) -> dict:
+async def update_task(date: datetime.date, updated_task: TaskUpdate) -> TaskAdminRead:
     return create_or_update_task(updated_task, date)
 
 @router.delete("/{date}/", status_code=status.HTTP_204_NO_CONTENT)

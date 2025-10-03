@@ -8,8 +8,9 @@ from sqlmodel import select
 from starlette.responses import FileResponse
 
 from app.database import session_scope
-from app.schemas.task import Task, TaskMedia
-from app.schemas.user import User, get_current_user
+from app.models.media import TaskMedia
+from app.models.task import Task
+from app.models.user import User, get_current_user
 
 router = APIRouter()
 

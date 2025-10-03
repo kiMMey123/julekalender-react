@@ -18,11 +18,9 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-SessionDep = Annotated[Session, Depends(get_session)]
 
 @contextmanager
 def session_scope():
-    session = SessionDep
     try:
         with Session(engine) as session:
             yield session
