@@ -6,7 +6,7 @@ from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
     from app.models.task import Task
-    from app.models.user import TaskTracker
+    from app.models.task_tracker import TaskResult
 
 from app.utils.security import generate_uid
 
@@ -32,12 +32,12 @@ class TaskMedia(SQLModel, table=True):
             case "closed": return True
             case "expired": return False
             case "open":
-                if task_tracker := TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session):
+                if task_tracker := TaskResult.get_or_create_daily_task_tracker(user_id=user.id, session=session):
                     return self.hint_number > task_tracker.hints_used
             case _:
                 return False
 
-        if task_tracker := TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session):
+        if task_tracker := TaskResult.get_or_create_daily_task_tracker(user_id=user.id, session=session):
             return self.hint_number > task_tracker.hints_used
 
         return False

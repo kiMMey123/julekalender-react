@@ -1,11 +1,11 @@
 import datetime
-from typing import Optional
+from typing import Optional, Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    email: str
+    email: Annotated[EmailStr, Field(examples=["kari.nordmann@example.com"])]
     full_name: str
     username: str
     password: str

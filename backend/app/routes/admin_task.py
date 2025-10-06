@@ -10,7 +10,8 @@ from app.database import session_scope
 from app.schemas.task import TaskCreate, TaskUpdate, TaskHintCreate, TaskAdminRead
 from app.models.task import Task, TaskHint, TaskAnswer, create_or_update_task
 from app.schemas.user import UserRead
-from app.models.user import User, TaskTracker
+from app.models.user import User
+from app.models.task_tracker import TaskResult
 from app.utils.encryption import enigma
 
 router = APIRouter()

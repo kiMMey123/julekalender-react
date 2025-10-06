@@ -8,7 +8,8 @@ from sqlmodel import select, and_
 
 from app.database import session_scope
 from app.models.task import Task, TaskHint
-from app.models.user import User, TaskTracker, get_current_user
+from app.models.user import User, get_current_user
+from app.models.task_tracker import TaskResult
 from app.schemas.task import TaskUserRead
 from app.schemas.user import UserAnswerReply
 
@@ -41,7 +42,7 @@ async def answer_task(
 ):
     try:
         with session_scope() as session:
-            task_tracker = TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session)
+            task_tracker = TaskResult.get_or_create_daily_task_tracker(user_id=user.id, session=session)
             answer_txt = answer.strip().lower()
             attempt_result = task_tracker.check_attempt(text=answer_txt, task=task, session=session)
 
@@ -68,7 +69,7 @@ async def get_user_hint(
         task: Annotated[Task, Depends(get_current_task)]
 ):
     with session_scope() as session:
-        task_tracker = TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session)
+        task_tracker = TaskResult.get_or_create_daily_task_tracker(user_id=user.id, session=session)
         if task_tracker.solved:
             return task.hints
 
@@ -89,7 +90,7 @@ async def unlock_user_hint(
         task: Annotated[Task, Depends(get_current_task)],
 ):
     with session_scope() as session:
-        task_tracker = TaskTracker.get_or_create_daily_task_tracker(user_id=user.id, session=session)
+        task_tracker = TaskResult.get_or_create_daily_task_tracker(user_id=user.id, session=session)
         if task_tracker.solved:
             raise HTTPException(status_code=400, detail="Task is already solved")
         if task_tracker.hints_used >= len(task.hints):

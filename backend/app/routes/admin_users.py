@@ -8,7 +8,8 @@ from app.database import session_scope
 from app.schemas.task import TaskCreate
 from app.models.task import Task, TaskAnswer
 from app.schemas.user import UserRead
-from app.models.user import User, TaskTracker
+from app.models.user import User
+from app.models.task_tracker import TaskResult
 from app.utils.encryption import enigma
 
 router = APIRouter()
@@ -34,11 +35,11 @@ async def get_user_by_id(
         return user
 
 @router.get("/{user_id}/task/")
-async def get_user_task(user_id: str) -> "TaskTracker":
+async def get_user_task(user_id: str) -> "TaskResult":
     if not await get_user_by_id(user_id):
         raise HTTPException(status_code=404, detail="User not found")
 
-    user_task = TaskTracker.get_or_create_daily_task_tracker(user_id)
+    user_task = TaskResult.get_or_create_daily_task_tracker(user_id)
     with session_scope() as session:
         session.add(user_task)
         session.commit()

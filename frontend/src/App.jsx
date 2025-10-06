@@ -35,8 +35,6 @@ function App() {
         }
     }
 
-
-
     useEffect(() => {
         setTime(getTime())
         fetchImage("3beab014-33b1-460b-920c-c278466eb321.png").then((res) => {setImg(res)})
