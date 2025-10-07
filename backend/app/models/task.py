@@ -2,57 +2,42 @@ import datetime
 from typing import List, Optional, Union
 
 from fastapi import HTTPException
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Date, Integer, String, DateTime, Column, ForeignKey
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlmodel import SQLModel, Field, Relationship, Session, select
 
-from app.database import session_scope
+from app.database import Base
 from app.models.media import TaskMedia
-from app.schemas.task import TaskAdminRead
-from app.schemas.task import TaskCreate, TaskUpdate
+from app.schemas.task import TaskCreate
 from app.utils.encryption import enigma
+from app.utils.security import generate_uid
 from app.utils.time import get_open_close_time
 
 
-class Task(SQLModel, table=True):
-    date: datetime.date = Field(default=datetime.date.today(), primary_key=True, unique=True)
-    open_time: datetime.datetime = Field(nullable=False)
-    close_time: datetime.datetime = Field(nullable=False)
-    info: str = Field(nullable=False)
-    answer: "TaskAnswer" = Relationship(back_populates="task", cascade_delete=True)
-    hints: List["TaskHint"] = Relationship(back_populates="task", cascade_delete=True)
-    media: List["TaskMedia"] = Relationship(back_populates="task", cascade_delete=True)
+class Task(Base):
+    __tablename__ = "task"
 
-    @classmethod
-    def get_task(cls, session: Session, date: datetime.date = datetime.date.today()) -> Optional["Task"]:
-        task = session.exec(select(cls).where(cls.date == date)).first()
-        return task
+    id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
+    date: Mapped[datetime.date] = mapped_column(Date, unique=True)
 
-    def get_admin_task(self) -> TaskAdminRead:
-        admin_task_dict = self.model_dump()
-        admin_task_dict["status"] = self.status
+    info: Mapped[str] = mapped_column(String, nullable=False)
+    author: Mapped[str] = mapped_column(String, nullable=False)
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
 
-        if self.answer:
-            admin_task_dict["answer_plaintext"] = enigma.decrypt_answer(self.answer.text)
-            admin_task_dict["answer"] = self.answer.model_dump()
+    answer_plaintext: Mapped[str] = mapped_column(String, nullable=False)
+    answer_regex: Mapped[str] = mapped_column(String, nullable=True)
+    answer_info: Mapped[str] = mapped_column(String, nullable=False)
+    yt_url: Mapped[str] = mapped_column(String, nullable=False)
 
-        admin_task_dict["media"] = self.media
-        admin_task_dict["hints"] = self.hints
+    open_at: Mapped[int] = mapped_column(Integer, nullable=False, default=9)
+    close_at: Mapped[int] = mapped_column(Integer, nullable=False, default=23)
 
-        return TaskAdminRead(**admin_task_dict)
-
-    def check_answer(self, text) -> bool:
-        return enigma.compare_answer(text, self.answer.text)
-
-    @property
-    def status(self) -> str:
-        now = datetime.datetime.now()
-        if self.open_time > now:
-            return "closed"
-        elif self.open_time < now < self.close_time:
-            return "open"
-        else:
-            return "expired"
+    uuid: Mapped[str]= mapped_column(String, unique=True, nullable=False, default_factory=generate_uid)
+    created_at: Mapped[datetime.datetime]= mapped_column(DateTime(timezone=True),
+                                                   default_factory=lambda: datetime.datetime.now(
+                                                       datetime.UTC))
+    updated_at: Mapped[datetime.datetime | None]= mapped_column(DateTime(timezone=True), default=None)
 
 
 class TaskHint(SQLModel, table=True):
@@ -115,6 +100,3 @@ def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date) -> TaskAdmi
 
     except IntegrityError as e:
         raise HTTPException(status_code=422, detail=str(e))
-
-
-TaskAdminRead.model_rebuild()

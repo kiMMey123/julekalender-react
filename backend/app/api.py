@@ -7,7 +7,6 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-from app.database import create_db_and_tables
 from app.routes import user, time, admin_users, task, admin_task, media
 from app.models.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
@@ -27,7 +26,6 @@ trigger = CronTrigger(second=0)
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    create_db_and_tables()
     # scheduler.add_job(my_secondly_task, trigger)
     # scheduler.start()
     print("startup")

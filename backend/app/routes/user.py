@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import session_scope
+from app.database import async_get_db
 from app.schemas.user import UserCreate, UserRead
 from app.models.user import User, get_user_task_trackers, get_current_user
+from app.crud.crud_users import crud_users
 from app.models.task_tracker import TaskResult
 
 from typing import Annotated
@@ -12,21 +14,18 @@ from fastapi.params import Depends
 router = APIRouter()
 
 @router.post("/", response_model=UserRead)
-async def create_user(user: UserCreate):
-    with session_scope() as session:
-        new_user = User.create_user(user)
-        try:
-            session.add(new_user)
-            session.commit()
-            session.refresh(new_user)
-        except IntegrityError as e:
-            session.rollback()
-            detail = "duplicate_user"
-            if "user.email" in str(e):
-                detail = "duplicate_email"
-            exception = HTTPException(status_code=409, detail=detail)
-            raise exception
-        return new_user
+async def create_user(
+        request: Request,
+        user: UserCreate,
+        db: Annotated[AsyncSession, Depends(async_get_db)]
+):
+    email_row = await crud_users.exists(db=db, email=user.email)
+    if email_row:
+        raise DuplicateValueException("Email is already registered")
+
+    username_row = await crud_users.exists(db=db, username=user.username)
+    if username_row:
+        raise DuplicateValueException("Username not available")
 
 
 @router.get("/", response_model=UserRead)

@@ -4,10 +4,10 @@ from typing import Optional, List
 from sqlalchemy import Column, Date, DateTime, Integer, String, Boolean, ForeignKey, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from app.database import Base  # Assuming you have a base declarative class
-from app.models.user import User
+from app.database import Base
 from app.settings import ATTEMPTS_PER_RESET, SCORES_PER_HINT_USED
 from app.utils.input import string_washer
+from app.utils.security import generate_uid
 
 
 class TaskResult(Base):
@@ -22,6 +22,7 @@ class TaskResult(Base):
     attempts_left: Mapped[int] = mapped_column(Integer, default=ATTEMPTS_PER_RESET)
     attempts_reset: Optional[Mapped[datetime.datetime]] = mapped_column(DateTime, nullable=True, default=None)
     attempts: Mapped[list] = mapped_column(JSON, default=[])
+    uuid: Mapped[str] = mapped_column(String, unique=True, default_factory=lambda: generate_uid())
 
     __table_args__ = (
         UniqueConstraint("date", "user_id"),

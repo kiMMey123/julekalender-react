@@ -9,15 +9,14 @@ from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
 from collections.abc import AsyncGenerator
 
 db_file_name = "julekalender.db"
-db_url = "sqlite:///" + db_file_name
+db_url = "sqlite+aiosqlite:///" + db_file_name
 
 connect_args = {"check_same_thread": False}
-engine = create_engine(db_url, connect_args=connect_args)
 
+async_engine = create_async_engine(db_url, echo=False, future=True)
 class Base(DeclarativeBase, MappedAsDataclass):
     pass
 
-async_engine = create_async_engine(db_url, echo=False, future=True)
 
 local_session = async_sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False)
 
