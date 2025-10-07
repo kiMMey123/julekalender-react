@@ -10,24 +10,26 @@ from contextlib import asynccontextmanager
 from app.routes import user, time, admin_users, task, admin_task, media
 from app.models.user import User
 from app.utils.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, Token
-
+from app.database import async_engine as engine, Base
 from datetime import datetime
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+# from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.triggers.cron import CronTrigger
+
 
 # The task to run
 def my_secondly_task():
     print(f"Task is running at {datetime.now()}")
     # ... additional task code goes here ...
 
-scheduler = BackgroundScheduler()
-trigger = CronTrigger(second=0)
+# scheduler = BackgroundScheduler()
+# trigger = CronTrigger(second=0)
 
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    # scheduler.add_job(my_secondly_task, trigger)
-    # scheduler.start()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
     print("startup")
     yield
     print("shutdown")

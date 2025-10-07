@@ -3,10 +3,13 @@ from os import environ
 
 
 dotenv_file = dotenv.find_dotenv()
+print(dotenv_file, "sdote")
 dotenv.load_dotenv(dotenv_file)
 
 def get_env_var(var_name, default=None):
     env_var = environ.get(f"JULEKALENDER_{var_name}")
+    if env_var is None:
+        print(f"{var_name} not set")
     return default if env_var is None else env_var
 
 JULEKALENDER_ANSWER_KEY=get_env_var("ANSWER_KEY").encode("utf-8")

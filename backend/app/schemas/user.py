@@ -34,6 +34,10 @@ class UserUpdate(BaseModel):
 class UserUpdateInternal(UserUpdate):
     updated_at: datetime.datetime
 
+class UserDelete(UserBase):
+    deleted: bool
+    deleted_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
 class UserAnswerAttempt(BaseModel):
     date: datetime.date
     text: str
