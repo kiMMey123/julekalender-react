@@ -39,7 +39,7 @@ class TaskAttemptUpdateInternal(TaskAttemptUpdate):
     updated_at: datetime
 
 
-class TaskAttemptDelete(BaseModel)
+class TaskAttemptDelete(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     is_deleted: bool
