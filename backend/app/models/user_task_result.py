@@ -9,12 +9,14 @@ from app.utils.security import generate_uid
 
 
 class TaskResult(Base):
-    __tablename__ = 'task_result'
+    __tablename__ = 'user_task_result'
+
+    id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id'))
-    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(Integer, ForeignKey('task.id'))
 
-    date: Mapped[date] = mapped_column(Date, primary_key=True, default=date.today(), unique=True)
+    date: Mapped[date] = mapped_column(Date, default=date.today(), unique=True, index=True)
     solved: Mapped[bool] = mapped_column(Boolean, default=False)
     time_solved: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
     score: Mapped[int] = mapped_column(Integer, default=0)

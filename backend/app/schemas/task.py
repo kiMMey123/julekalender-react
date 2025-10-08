@@ -1,13 +1,11 @@
 import datetime
+from typing import Optional, List, Annotated
 
-import pydantic
-from pydantic import BaseModel, Field, HttpUrl, field_serializer, ConfigDict
-from typing import Optional, List, TYPE_CHECKING, Annotated
+from pydantic import BaseModel, Field, field_serializer, ConfigDict
 
 from app.schemas.core import TimestampSchema
 from app.utils.encryption import enigma
 from app.utils.time import get_open_close_time
-
 
 
 class TaskStatus(BaseModel):
@@ -39,35 +37,22 @@ class TaskHintRead(BaseModel):
 
 class TaskBase(BaseModel):
     date: datetime.date
-    info: str
-    author: str = Field(min_length=2, max_length=30)
-    open_at: int
-    close_at: int
-
-    @field_serializer("open_at")
-    def open_time(self, open_at: int) -> str:
-        return get_open_close_time(self.date, open_at).isoformat(timespec="seconds")
-
-    @field_serializer("close_at")
-    def close_time(self, close_at: int) -> str:
-        return get_open_close_time(self.date, close_at).isoformat(timespec="seconds")
+    info: str = Field(min_length=1, max_length=63206, examples=["Dette er første delen av task"],
+                                default=None)
+    open_at: int = Field(ge=7, le=22)
+    close_at: int = Field(gt=9, le=23)
 
 
 class Task(TaskBase, TaskStatus, TimestampSchema):
-    created_by_user_id: int
     uuid: str
 
+
 class TaskCreate(TaskBase):
-    text: Optional[str] = Field(min_length=1, max_length=63206, examples=["Dette er første delen av task"], default=None),
-    author: Annotated[
-        str | None,
-        Field(min_length=2,  max_length=30, examples=["forfatter"], default=None),
-    ]
-    test: str = Field(pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$", max_length=63206, examples=["vg.no"])
+
     yt_url: Optional[str] = Field(
-            pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$",
-            examples=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
-        )
+        pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$",
+        examples=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+    )
 
     answer_info: str
     answer_plaintext: str
@@ -86,38 +71,95 @@ class TaskCreate(TaskBase):
 
 
 class TaskCreateInternal(TaskCreate):
-    created_by_user_id: int
+    author: str = Field(min_length=2, max_length=30)
+    created_by_user_id: int = Field(gt=0)
 
 
 class TaskUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    info: Optional[str]
-    author: Optional[str] = Field(min_length=2, max_length=30)
-    answer_info: Optional[str]
-    answer_plaintext: Optional[str]
-    answer_regex: Optional[str]
-    open_at: Optional[int] = Field(default=9, ge=6, le=22)
-    close_at: Optional[int] = Field(default=23, gt=19, le=23)
-    yt_url: Optional[str] = Field(
-        pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$",
-        examples=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
-    )
+    info: Annotated[
+        str | None,
+        Field(min_length=1, max_length=63206, examples=["Infotekst"], default=None),
+    ]
+    answer_info: Annotated[
+        str | None,
+        Field(min_length=1, max_length=63206, examples=["Svartekst"], default=None),
+    ]
+    answer_plaintext: Annotated[
+        str | None,
+        Field(min_length=1, max_length=200, examples=["Svaret i plaintext"], default=None),
+    ]
+    answer_regex: Annotated[
+        str | None,
+        Field(min_length=1, max_length=200, examples=["Svaret i regex"], default=None),
+    ]
+    open_at: Annotated[
+        int | None,
+        Field(ge=7, le=22, default=9)
+    ]
+    close_at: Annotated[
+        int | None,
+        Field(ge=9, le=23, default=23)
+    ]
+    yt_url: Annotated[
+        str | None,
+        Field(
+            pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$",
+            examples=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+            default=None
+        )
+    ]
+    @field_serializer("answer_plaintext")
+    def serialize_answer_plaintext(self, answer_plaintext: str) -> str:
+        if answer_plaintext:
+            return enigma.encrypt_answer(answer_plaintext)
+
+        return enigma.encrypt_answer(answer_plaintext)
+
+    @field_serializer("answer_regex")
+    def serialize_answer_regex(self, answer_regex: str) -> str | None:
+        if answer_regex:
+            return enigma.encrypt_answer(answer_regex)
+
+        return None
 
 
 class TaskUpdateInternal(TaskUpdate):
-    created_by_user_id: int
+    updated_at: datetime.datetime
 
+
+class TaskDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    is_deleted: bool
+    deleted_at: datetime.datetime
 
 class TaskRead(TaskBase, TaskStatus):
     media: Optional[List[TaskMediaRead]]
     hints: Optional[List[TaskHintRead]]
 
+    @field_serializer("open_at")
+    def open_time(self, open_at: int) -> str:
+        return get_open_close_time(self.date, open_at).isoformat(timespec="seconds")
 
-class TaskAdminRead(Task):
-    media: Optional[List[TaskMediaRead]]
-    hints: Optional[List[TaskHintRead]]
+    @field_serializer("close_at")
+    def close_time(self, close_at: int) -> str:
+        return get_open_close_time(self.date, close_at).isoformat(timespec="seconds")
 
-    @field_serializer("answer")
-    def serialize_answer(self, answer: str) -> str:
-        return enigma.decrypt_answer(answer)
+
+class TaskAdminRead(TaskRead):
+    answer_info: str
+    answer_plaintext: str
+    answer_regex: Optional[str] = None
+
+    @field_serializer("answer_plaintext")
+    def serialize_answer_plaintext(self, answer_plaintext: str) -> str:
+        return enigma.decrypt_answer(answer_plaintext)
+
+    @field_serializer("answer_regex")
+    def serialize_answer_regex(self, answer_regex: str) -> str | None:
+        if answer_regex:
+            return enigma.decrypt_answer(answer_regex)
+
+        return None

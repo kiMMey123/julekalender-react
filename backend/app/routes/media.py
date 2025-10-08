@@ -10,7 +10,8 @@ from starlette.responses import FileResponse
 from app.database import session_scope
 from app.models.task_media import TaskMedia
 from app.models.task import Task
-from app.models.user import User, get_current_user
+from app.models.user import User
+from app.utils.user_utils import get_current_user
 
 router = APIRouter()
 

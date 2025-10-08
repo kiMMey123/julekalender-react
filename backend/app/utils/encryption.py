@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet, InvalidToken
 import re
-from app.settings import JULEKALENDER_ANSWER_KEY
+from app.settings import settings
 
 class Enigma(Fernet):
     def __init__(self, key):
@@ -33,4 +33,4 @@ class Enigma(Fernet):
     def decrypt_answer(self, txt):
         return self.decrypt(bytes(txt, 'UTF-8')).decode('UTF-8')
 
-enigma = Enigma(JULEKALENDER_ANSWER_KEY)
+enigma = Enigma(settings.ANSWER_KEY)

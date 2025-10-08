@@ -1,17 +1,10 @@
 import datetime
-from typing import List, Optional, Union
 
-from fastapi import HTTPException
-from sqlalchemy import UniqueConstraint, Date, Integer, String, DateTime, Column, ForeignKey
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Date, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlmodel import SQLModel, Field, Relationship, Session, select
 
 from app.database import Base
-from app.schemas.task import TaskCreate
-from app.utils.encryption import enigma
 from app.utils.security import generate_uid
-from app.utils.time import get_open_close_time
 
 
 class Task(Base):
@@ -37,9 +30,6 @@ class Task(Base):
                                                    default_factory=lambda: datetime.datetime.now(
                                                        datetime.UTC))
     updated_at: Mapped[datetime.datetime | None]= mapped_column(DateTime(timezone=True), default=None)
-
-
-
 
 # def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date) -> TaskAdminRead:
 #     try:

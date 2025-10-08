@@ -8,9 +8,9 @@ from pydantic import BaseModel
 import uuid
 from passlib.context import CryptContext
 
-from app.settings import get_env_var
+from app.settings import settings
 
-SECRET_KEY = get_env_var("SECRET_KEY")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 180
 
@@ -31,7 +31,7 @@ def verify_password(plain_password, hashed_password) -> bool:
 def authenticate_user(user, password: str):
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user["hashed_password"]):
         return False
     return user
 
