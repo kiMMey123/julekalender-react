@@ -10,5 +10,6 @@ class TaskAttempt(Base):
     __tablename__ = 'task_attempt'
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id'))
+    task_result_id: Mapped[int] = mapped_column(Integer, ForeignKey('task_result.id'), nullable=False)
     date: Mapped[datetime.date] = mapped_column(Date, ForeignKey('task_result.date'), nullable=False)
     uuid: Mapped[str] = mapped_column(String, unique=True, nullable=False)

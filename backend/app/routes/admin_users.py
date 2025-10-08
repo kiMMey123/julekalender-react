@@ -9,7 +9,7 @@ from app.schemas.task import TaskCreate
 from app.models.task import Task, TaskAnswer
 from app.schemas.user import UserRead
 from app.models.user import User
-from app.models.task_tracker import TaskResult
+from app.models.user_task_result import TaskResult
 from app.utils.encryption import enigma
 
 router = APIRouter()

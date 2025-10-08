@@ -7,7 +7,7 @@ from app.database import async_get_db
 from app.schemas.user import UserCreate, UserRead, UserCreateInternal
 from app.models.user import User, get_user_task_trackers, get_current_user
 from app.crud.crud_users import crud_users
-from app.models.task_tracker import TaskResult
+from app.models.user_task_result import TaskResult
 
 from typing import Annotated, cast
 from fastapi.params import Depends
@@ -22,8 +22,8 @@ async def create_user(
         user: UserCreate,
         db: Annotated[AsyncSession, Depends(async_get_db)]
 ):
-    email_row = await crud_users.exists(db=db, email=user.email)
-    if email_row:
+    if await crud_users.exists(db=db, email=user.email):
+
         raise DuplicateValueException("Email is already registered")
 
     username_row = await crud_users.exists(db=db, username=user.username)

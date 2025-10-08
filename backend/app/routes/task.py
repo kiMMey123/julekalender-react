@@ -9,7 +9,7 @@ from sqlmodel import select, and_
 from app.database import session_scope
 from app.models.task import Task, TaskHint
 from app.models.user import User, get_current_user
-from app.models.task_tracker import TaskResult
+from app.models.user_task_result import TaskResult
 from app.schemas.task import TaskUserRead
 from app.schemas.user import UserAnswerReply
 

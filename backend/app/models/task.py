@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlmodel import SQLModel, Field, Relationship, Session, select
 
 from app.database import Base
-from app.models.media import TaskMedia
 from app.schemas.task import TaskCreate
 from app.utils.encryption import enigma
 from app.utils.security import generate_uid
@@ -40,63 +39,47 @@ class Task(Base):
     updated_at: Mapped[datetime.datetime | None]= mapped_column(DateTime(timezone=True), default=None)
 
 
-class TaskHint(SQLModel, table=True):
-    date: datetime.date = Field(primary_key=True, foreign_key="task.date")
-    info: Optional[str] = Field(nullable=True)
-    hint_number: int = Field(primary_key=True, nullable=False, le=5)
-    task: Task = Relationship(back_populates="hints")
-
-    __table_args__ = (
-        UniqueConstraint("date", "hint_number"),
-    )
 
 
-class TaskAnswer(SQLModel, table=True):
-    date: datetime.date = Field(primary_key=True, unique=True, foreign_key="task.date")
-    text: str = Field(nullable=False)
-    task: Task = Relationship(back_populates="answer")
-    yt_url: Optional[str]
-
-
-def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date) -> TaskAdminRead:
-    try:
-        with session_scope() as session:
-            task_dict = {k: v for k, v in data.model_dump().items() if v is not None}
-
-            for k, v in task_dict.items():
-                match k:
-                    case "open_time" | "close_time":
-                        task_dict[k] = get_open_close_time(date, v)
-                    case "answer":
-                        task_dict[k] = enigma.encrypt_answer(task_dict.get("answer"))
-                    case "yt_url":
-                        task_dict[k] = task_dict.get("yt_url").unicode_string()
-
-            answer_dict = {
-                "text": task_dict.pop("answer", None),
-                "yt_url": task_dict.pop("yt_url", None)
-            }
-
-            if task := Task.get_task(session, date):
-                if task.status != "closed":
-                    raise HTTPException(status_code=403, detail="cannot edit open or expired task")
-                for k, v in task_dict.items():
-                    setattr(task, k, v)
-                answer = task.answer
-                for k, v in answer_dict.items():
-                    if v is not None:
-                        setattr(answer, k, v)
-
-            else:
-                task = Task(date=date, **task_dict)
-                answer = TaskAnswer(date=date, **answer_dict)
-
-            session.add(task)
-            session.add(answer)
-            session.commit()
-            session.refresh(answer)
-            session.refresh(task)
-            return task.get_admin_task()
-
-    except IntegrityError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+# def create_or_update_task(data: Union[TaskCreate, TaskUpdate], date) -> TaskAdminRead:
+#     try:
+#         with session_scope() as session:
+#             task_dict = {k: v for k, v in data.model_dump().items() if v is not None}
+#
+#             for k, v in task_dict.items():
+#                 match k:
+#                     case "open_time" | "close_time":
+#                         task_dict[k] = get_open_close_time(date, v)
+#                     case "answer":
+#                         task_dict[k] = enigma.encrypt_answer(task_dict.get("answer"))
+#                     case "yt_url":
+#                         task_dict[k] = task_dict.get("yt_url").unicode_string()
+#
+#             answer_dict = {
+#                 "text": task_dict.pop("answer", None),
+#                 "yt_url": task_dict.pop("yt_url", None)
+#             }
+#
+#             if task := Task.get_task(session, date):
+#                 if task.status != "closed":
+#                     raise HTTPException(status_code=403, detail="cannot edit open or expired task")
+#                 for k, v in task_dict.items():
+#                     setattr(task, k, v)
+#                 answer = task.answer
+#                 for k, v in answer_dict.items():
+#                     if v is not None:
+#                         setattr(answer, k, v)
+#
+#             else:
+#                 task = Task(date=date, **task_dict)
+#                 answer = TaskAnswer(date=date, **answer_dict)
+#
+#             session.add(task)
+#             session.add(answer)
+#             session.commit()
+#             session.refresh(answer)
+#             session.refresh(task)
+#             return task.get_admin_task()
+#
+#     except IntegrityError as e:
+#         raise HTTPException(status_code=422, detail=str(e))

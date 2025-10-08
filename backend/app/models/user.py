@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, UTC
 from typing import Optional, List, Annotated
 
 from fastapi import HTTPException
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, relationship, mapped_column
 from starlette import status
 
 from app.database import Base
-from app.models.task_tracker import TaskResult
+from app.models.user_task_result import TaskResult
 from app.utils.security import get_password_hash, oauth2_scheme, decode_payload, generate_uid
 
 
@@ -27,10 +27,11 @@ class User(Base):
 
     uuid: Mapped[str] = mapped_column(String, unique=True, nullable=False, default_factory=generate_uid)
     is_admin: bool = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),
-                                                          default_factory=lambda: datetime.datetime.now(
-                                                              datetime.UTC))
-    updated_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    is_deleted: Mapped[bool] = mapped_column(default=False, index=True)
 
 
 def get_user_task_trackers(session, user):

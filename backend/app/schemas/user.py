@@ -1,6 +1,6 @@
 import datetime
 from typing import Optional, Annotated
-from app.schemas.core import TimestampSchema
+from app.schemas.core import TimestampSchema, PersistentDeletion
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
@@ -9,7 +9,7 @@ class UserBase(BaseModel):
     username: Annotated[str, Field(min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["brukersen"])]
     email: Annotated[EmailStr, Field(examples=["kari.nordmann@example.com"])]
 
-class User(TimestampSchema, UserBase):
+class User(TimestampSchema, PersistentDeletion, UserBase):
     email: Annotated[EmailStr, Field(examples=["kari.nordmann@example.com"])]
     hashed_password: str
     is_admin: bool = False
@@ -17,7 +17,7 @@ class User(TimestampSchema, UserBase):
 
 
 class UserRead(UserBase):
-    id: str
+    id: int
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
@@ -38,18 +38,3 @@ class UserDelete(UserBase):
     deleted: bool
     deleted_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
-class UserAnswerAttempt(BaseModel):
-    date: datetime.date
-    text: str
-
-
-class UserAnswerReply(UserAnswerAttempt):
-    message: str
-    user_id: str
-    solved: bool
-    time_solved: Optional[datetime.datetime]
-    score: int
-    hints_used: int
-    attempts_left: int
-    attempts_reset: Optional[datetime.datetime]
-    attempts: list[str]

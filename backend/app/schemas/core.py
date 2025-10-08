@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_serializer
 class TimestampSchema(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     updated_at: datetime | None = Field(default=None)
+    deleted_at: datetime | None = Field(default=None)
 
     @field_serializer("created_at")
     def serialize_dt(self, created_at: datetime | None, _info: Any) -> str | None:
@@ -21,5 +22,16 @@ class TimestampSchema(BaseModel):
     def serialize_updated_at(self, updated_at: datetime | None, _info: Any) -> str | None:
         if updated_at is not None:
             return updated_at.isoformat()
+
+        return None
+
+class PersistentDeletion(BaseModel):
+    deleted_at: datetime | None = Field(default=None)
+    is_deleted: bool = False
+
+    @field_serializer("deleted_at")
+    def serialize_dates(self, deleted_at: datetime | None, _info: Any) -> str | None:
+        if deleted_at is not None:
+            return deleted_at.isoformat()
 
         return None
