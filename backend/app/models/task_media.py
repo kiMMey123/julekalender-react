@@ -7,8 +7,6 @@ from sqlalchemy import Column, Date, DateTime, Integer, String, Boolean, Foreign
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.settings import ATTEMPTS_PER_RESET
-from app.utils.security import generate_uid
 
 from sqlmodel import SQLModel, Field, Relationship
 

@@ -4,7 +4,7 @@ from sqlalchemy import Column, Date, DateTime, Integer, String, Boolean, Foreign
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.settings import ATTEMPTS_PER_RESET
+from app.settings import settings
 from app.utils.security import generate_uid
 
 
@@ -21,7 +21,7 @@ class TaskResult(Base):
     time_solved: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
     score: Mapped[int] = mapped_column(Integer, default=0)
     hints_used: Mapped[int] = mapped_column(Integer, default=0)
-    attempts_left: Mapped[int] = mapped_column(Integer, default=ATTEMPTS_PER_RESET)
+    attempts_left: Mapped[int] = mapped_column(Integer, default=settings.ATTEMPTS_PER_RESET)
     attempts_reset: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
 
     uuid: Mapped[str] = mapped_column(String, unique=True, default_factory=lambda: generate_uid())

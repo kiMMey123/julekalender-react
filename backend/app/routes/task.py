@@ -109,7 +109,7 @@ async def answer_task(
 
     task_attempts = await crud_users_attempts.get_multi(db=db, user_id=user["id"], task_id=task.id,
                                                         schema_to_select=TaskAttemptRead)
-    answer = string_washer(answer)
+    user_answer = string_washer(answer)
 
     if answer in [t["text"] for t in task_attempts["data"]]:
         return TaskResultWithAnswer(**result.model_dump(), text=answer, msg="duplicate")
@@ -124,15 +124,17 @@ async def answer_task(
             attempts_left = settings.ATTEMPTS_PER_RESET
 
     attempts_left = attempts_left - 1
+    if ans := db_task["answer_regex"]:
+        correct_answer = enigma.compare_answer(user_answer, ans)
+    else:
+        correct_answer = enigma.compare_answer(user_answer, db_task["answer_plaintext"])
 
-    if enigma.compare_answer(txt=answer, ref=db_task["answer_regex"] or db_task["answer_plaintext"]):
+    if correct_answer:
         result_update["solved"] = True
         result_update["time_solved"] = datetime.datetime.now()
         result_update["score"] = settings.SCORES_PER_HINT_USED[result.hints_used]
-    else
+    else:
         result_update["msg"] = "incorrect"
-
-
 
     return result
 
