@@ -5,7 +5,7 @@ from fastcrud.exceptions.http_exceptions import DuplicateValueException, NotFoun
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_users_results import crud_task_results
+from app.crud.crud_users_results import crud_users_results
 from app.database import async_get_db
 from app.utils.task_utils import get_current_task
 from app.schemas.task import Task, TaskRead
@@ -51,7 +51,7 @@ async def create_user(
 
 @router.get("/", response_model=UserRead)
 async def read_current_user(
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: Annotated[dict, Depends(get_current_user)]
 ):
     return current_user
 
@@ -60,7 +60,7 @@ async def get_my_results(
     user: Annotated[dict, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
 ):
-    user_results = await crud_task_results.get_multi(
+    user_results = await crud_users_results.get_multi(
         db=db,
         limit=30,
         user_id=user["id"],
@@ -75,8 +75,7 @@ async def get_result_today(
 ):
     task = await get_current_task(db=db)
 
-    result = await crud_task_results.get(db=db, user_id=user["id"], task_id=task["id"], schema_to_select=TaskResultRead)
-    print(result)
+    result = await crud_users_results.get(db=db, user_id=user["id"], task_id=task["id"], schema_to_select=TaskResultRead)
     if not result:
         new_result = TaskResultCreateInternal(
             date=task["date"],
@@ -84,7 +83,7 @@ async def get_result_today(
             task_id=task["id"],
         )
 
-        created_result = await crud_task_results.create(db=db, object=new_result)
-        result = await crud_task_results.get(db=db, id=created_result.id, schema_to_select=TaskResultRead)
+        created_result = await crud_users_results.create(db=db, object=new_result)
+        result = await crud_users_results.get(db=db, id=created_result.id, schema_to_select=TaskResultRead)
 
     return cast(TaskResultRead, result)

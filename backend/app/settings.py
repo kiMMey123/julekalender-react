@@ -23,16 +23,17 @@ class Settings(BaseSettings):
     ADMIN_EMAIL = get_env_var("ADMIN_EMAIL")
     ADMIN_PASSWORD = get_env_var("ADMIN_PASSWORD")
 
+    ATTEMPTS_PER_RESET = 10
+    SCORES_PER_HINT_USED = {
+        0: 10,
+        1: 7,
+        2: 5,
+        3: 3,
+        4: 2,
+        5: 1
+    }
+
 settings = Settings()
 
 
-ATTEMPTS_PER_RESET = 10
 
-SCORES_PER_HINT_USED = {
-    0: 10,
-    1: 7,
-    2: 5,
-    3: 3,
-    4: 2,
-    5: 1
-}

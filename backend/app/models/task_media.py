@@ -27,7 +27,7 @@ class MediaTypes(str, Enum):
 class TaskMedia(Base):
     __tablename__ = "task_media"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
     task_id: Mapped[int] = mapped_column(Integer, ForeignKey("task.id"))
     date: Mapped[date] = mapped_column(Date, ForeignKey("task.date"))
     info: Mapped[str] = mapped_column(String,nullable=True)

@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional, List, Annotated
 
-from pydantic import BaseModel, Field, field_serializer, ConfigDict
+from pydantic import BaseModel, Field, field_serializer, ConfigDict, computed_field
 
 from app.schemas.core import TimestampSchema
 from app.utils.encryption import enigma
@@ -9,19 +9,36 @@ from app.utils.time import get_open_close_time
 
 
 class TaskStatus(BaseModel):
-    status: str | None = Field(default="closed")
+    @computed_field
+    @property
+    def status(self) -> str:
+        if hasattr(self, 'date') and hasattr(self, 'open_at') and hasattr(self, 'close_at'):
+            now = datetime.datetime.now()
+            open_time = get_open_close_time(self.date, self.open_at)
+            close_time = get_open_close_time(self.date, self.close_at)
+            if open_time > now:
+                return "closed"
+            elif open_time < now < close_time:
+                return "open"
+            else:
+                return "expired"
 
-    @field_serializer("status")
-    def serialize_status(self, status: str) -> str:
-        now = datetime.datetime.now()
-        open_time = get_open_close_time(self.date, self.open_at)
-        close_time = get_open_close_time(self.date, self.close_at)
-        if open_time > now:
-            return "closed"
-        elif open_time < now < close_time:
-            return "open"
-        else:
-            return "expired"
+        return "closed"
+
+class TaskTimeStamp(BaseModel):
+    @computed_field
+    @property
+    def open_time(self) -> str:
+        if hasattr(self, 'date') and hasattr(self, 'open_at'):
+            return get_open_close_time(self.date, self.open_at).isoformat(timespec="seconds")
+        return "N/A"
+
+    @computed_field
+    @property
+    def close_time(self) -> str:
+        if hasattr(self, 'date') and hasattr(self, 'close_at'):
+            return get_open_close_time(self.date, self.close_at).isoformat(timespec="seconds")
+        return "N/A"
 
 
 class TaskMediaRead(BaseModel):
@@ -43,12 +60,12 @@ class TaskBase(BaseModel):
     close_at: int = Field(gt=9, le=23)
 
 
+
 class Task(TaskBase, TaskStatus, TimestampSchema):
     uuid: str
 
 
 class TaskCreate(TaskBase):
-
     yt_url: Optional[str] = Field(
         pattern=r"^https://www.youtube.com/watch\?v=[a-zA-Z0-9]+$",
         examples=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
@@ -57,6 +74,11 @@ class TaskCreate(TaskBase):
     answer_info: str
     answer_plaintext: str
     answer_regex: Optional[str] = None
+
+
+class TaskCreateInternal(TaskCreate):
+    author: str = Field(min_length=2, max_length=30)
+    created_by_user_id: int = Field(gt=0)
 
     @field_serializer("answer_plaintext")
     def serialize_answer_plaintext(self, answer_plaintext: str) -> str:
@@ -68,12 +90,6 @@ class TaskCreate(TaskBase):
             return enigma.encrypt_answer(answer_regex)
 
         return None
-
-
-class TaskCreateInternal(TaskCreate):
-    author: str = Field(min_length=2, max_length=30)
-    created_by_user_id: int = Field(gt=0)
-
 
 class TaskUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -111,11 +127,11 @@ class TaskUpdate(BaseModel):
         )
     ]
     @field_serializer("answer_plaintext")
-    def serialize_answer_plaintext(self, answer_plaintext: str) -> str:
+    def serialize_answer_plaintext(self, answer_plaintext: str) -> str | None:
         if answer_plaintext:
             return enigma.encrypt_answer(answer_plaintext)
 
-        return enigma.encrypt_answer(answer_plaintext)
+        return None
 
     @field_serializer("answer_regex")
     def serialize_answer_regex(self, answer_regex: str) -> str | None:
@@ -135,26 +151,22 @@ class TaskDelete(BaseModel):
     is_deleted: bool
     deleted_at: datetime.datetime
 
-class TaskRead(TaskBase, TaskStatus):
-    media: Optional[List[TaskMediaRead]]
-    hints: Optional[List[TaskHintRead]]
-
-    @field_serializer("open_at")
-    def open_time(self, open_at: int) -> str:
-        return get_open_close_time(self.date, open_at).isoformat(timespec="seconds")
-
-    @field_serializer("close_at")
-    def close_time(self, close_at: int) -> str:
-        return get_open_close_time(self.date, close_at).isoformat(timespec="seconds")
+class TaskRead(TaskBase, TaskStatus, TaskTimeStamp):
+    id: int
+    media: Optional[List[TaskMediaRead]] = Field(default_factory=list)
+    hints: Optional[List[TaskHintRead]] = Field(default_factory=list)
 
 
-class TaskAdminRead(TaskRead):
+
+
+class TaskAdminRead(TaskRead, TaskStatus, TaskTimeStamp):
     answer_info: str
     answer_plaintext: str
     answer_regex: Optional[str] = None
 
     @field_serializer("answer_plaintext")
     def serialize_answer_plaintext(self, answer_plaintext: str) -> str:
+        print("decrypting answer_plaintext", answer_plaintext)
         return enigma.decrypt_answer(answer_plaintext)
 
     @field_serializer("answer_regex")

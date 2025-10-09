@@ -14,10 +14,10 @@ class TaskHint(Base):
         UniqueConstraint("date", "hint_number"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
     date: Mapped[date] = mapped_column(Date, ForeignKey('task.date'), nullable=False)
     task_id: Mapped[int] = mapped_column(Integer, ForeignKey('task.id'), nullable=False)
-    hint_number: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
+    hint_number: Mapped[int] = mapped_column(Integer, nullable=False)
     file_name: Mapped[str] = mapped_column(String, nullable=False)
 
     uuid: Mapped[str] = mapped_column(String, unique=True, default_factory=lambda: generate_uid())

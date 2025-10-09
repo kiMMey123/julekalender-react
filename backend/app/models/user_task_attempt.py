@@ -9,14 +9,15 @@ from app.utils.security import generate_uid
 
 class TaskAttempt(Base):
     __tablename__ = 'task_attempt'
-    answer: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(String, nullable=False)
+    msg: Mapped[str] = mapped_column(String, nullable=False)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id'))
     task_id: Mapped[int] = mapped_column(Integer, ForeignKey('task.id'), nullable=False)
-    task_result_id: Mapped[int] = mapped_column(Integer, ForeignKey('task_result.id'), nullable=False)
-    date: Mapped[date] = mapped_column(Date, ForeignKey('task_result.date'), nullable=False)
+    task_result_id: Mapped[int] = mapped_column(Integer, ForeignKey('user_task_result.id'), nullable=False)
 
+    date: Mapped[date] = mapped_column(Date, ForeignKey('user_task_result.date'), nullable=False)
     uuid: Mapped[str] = mapped_column(String, unique=True, nullable=False, default_factory=generate_uid)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))

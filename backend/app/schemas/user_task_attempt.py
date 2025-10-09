@@ -7,10 +7,11 @@ from app.schemas.core import TimestampSchema, PersistentDeletion
 
 class TaskAttemptBase(BaseModel):
     date: date
-    answer: str
+    text: str
 
 
 class TaskAttempt(TimestampSchema, PersistentDeletion, TaskAttemptBase):
+    msg: str
     id: int
     user_id: int
     task_id: int
@@ -18,6 +19,7 @@ class TaskAttempt(TimestampSchema, PersistentDeletion, TaskAttemptBase):
 
 
 class TaskAttemptRead(TaskAttemptBase):
+    msg: str
     user_id: int
 
 
@@ -26,6 +28,7 @@ class TaskAttemptCreate(TaskAttemptBase):
 
 
 class TaskAttemptCreateInternal(TaskAttemptCreate):
+    msg: str
     user_id: int
     task_id: int
     task_result_id: int
