@@ -3,7 +3,7 @@ from typing import Optional, List, Annotated
 
 from pydantic import BaseModel, Field, field_serializer, ConfigDict, computed_field
 
-from app.schemas.core import TimestampSchema
+from app.schemas.core import TimestampSchema, PersistentDeletion
 from app.utils.encryption import enigma
 from app.utils.time import get_open_close_time
 
@@ -56,12 +56,12 @@ class TaskBase(BaseModel):
     date: datetime.date
     info: str = Field(min_length=1, max_length=63206, examples=["Dette er første delen av task"],
                                 default=None)
-    open_at: int = Field(ge=7, le=22)
-    close_at: int = Field(gt=9, le=23)
+    open_at: int = Field(ge=7, le=22, default=9)
+    close_at: int = Field(ge=9, le=23, default=23)
 
 
 
-class Task(TaskBase, TaskStatus, TimestampSchema):
+class Task(TaskBase, TaskStatus, TimestampSchema, PersistentDeletion):
     uuid: str
 
 
@@ -73,7 +73,8 @@ class TaskCreate(TaskBase):
 
     answer_info: str
     answer_plaintext: str
-    answer_regex: Optional[str] = None
+    answer_regex: Optional[str] = Field(
+        pattern=r"^[a-zA-Z0-9]+$", default=None, examples=["^[a-zA-Z0-9]+$"] )
 
 
 class TaskCreateInternal(TaskCreate):
@@ -155,8 +156,6 @@ class TaskRead(TaskBase, TaskStatus, TaskTimeStamp):
     id: int
     media: Optional[List[TaskMediaRead]] = Field(default_factory=list)
     hints: Optional[List[TaskHintRead]] = Field(default_factory=list)
-
-
 
 
 class TaskAdminRead(TaskRead, TaskStatus, TaskTimeStamp):

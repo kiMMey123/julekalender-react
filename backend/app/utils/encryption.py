@@ -14,12 +14,12 @@ class Enigma(Fernet):
 
             txt = str(txt).lower().strip()
 
-
             if ref_decrypt.startswith("^") and ref_decrypt.endswith("$"):
                 pattern = re.compile(ref_decrypt, re.IGNORECASE)
-                return pattern.search(txt) is not None
+            else:
+                pattern = re.compile("^" + ref_decrypt + "$", re.IGNORECASE)
 
-            return str(ref_decrypt).lower() == txt
+            return pattern.search(txt) is not None
 
         except InvalidToken as e:
             return False

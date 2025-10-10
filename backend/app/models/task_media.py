@@ -29,10 +29,11 @@ class TaskMedia(Base):
     task_id: Mapped[int] = mapped_column(Integer, ForeignKey("task.id"))
     date: Mapped[date] = mapped_column(Date, ForeignKey("task.date"))
     info: Mapped[str] = mapped_column(String,nullable=True)
-    media_type: Mapped[MediaTypes] = mapped_column(String, default=MediaTypes.PNG)
-    hint_number: Mapped[int] = mapped_column(Integer, default=0)
 
-    uuid: Mapped[str] = mapped_column(String, unique=True, default_factory=lambda: generate_uid())
+    file_name: Mapped[str] = mapped_column(String, unique=True)
+    media_type: Mapped[MediaTypes] = mapped_column(String, nullable=False)
+
+    hint_number: Mapped[int] = mapped_column(Integer, default=0)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

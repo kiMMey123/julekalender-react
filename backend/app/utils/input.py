@@ -1,2 +1,8 @@
 def string_washer(text: str) -> str:
-    return " ".join([w for w in text.strip() if w != " "]).lower()
+    text = text.strip().lower()
+    new_text = ""
+    for word in text.split(" "):
+        if word != "":
+            new_text += word
+            new_text += " "
+    return new_text.strip()

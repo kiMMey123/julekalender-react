@@ -3,20 +3,16 @@ from typing import Optional, List
 
 from pydantic import BaseModel, Field, field_serializer, ConfigDict
 
-from app.schemas.core import TimestampSchema
+from app.schemas.core import TimestampSchema, PersistentDeletion
+from app.schemas.task import TaskMediaRead
 from app.utils.encryption import enigma
-
-class TaskMediaRead(BaseModel):
-    file_name: str
-    description: str
-    media_type: str
 
 class TaskHintBase(BaseModel):
     date: datetime.date
     info: str = Field(min_length=1, max_length=63206, examples=["Dette er et hint til oppgaven"]),
 
 
-class TaskHint(TaskHintBase, TimestampSchema):
+class TaskHint(TaskHintBase, TimestampSchema, PersistentDeletion):
     uuid: str
 
 

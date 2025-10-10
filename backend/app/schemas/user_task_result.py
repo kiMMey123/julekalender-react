@@ -1,10 +1,11 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.core import TimestampSchema, PersistentDeletion
-from app.settings import ATTEMPTS_PER_RESET
+from app.schemas.user_task_attempt import TaskAttemptRead
+from app.settings import settings
 
 
 class TaskResultBase(BaseModel):
@@ -13,7 +14,7 @@ class TaskResultBase(BaseModel):
     time_solved: Optional[datetime] = None
     score: int = Field(default=0, ge=0, le=10)
     hints_used: int = Field(default=0, ge=0, le=5)
-    attempts_left: int = Field(default=ATTEMPTS_PER_RESET)
+    attempts_left: int = Field(default=settings.ATTEMPTS_PER_RESET)
     attempts_reset: Optional[datetime] = None
 
 
@@ -25,10 +26,12 @@ class TaskResult(TimestampSchema, PersistentDeletion, TaskResultBase):
 
 
 class TaskResultRead(TaskResultBase):
+    id: int
     user_id: int
 
 class TaskResultCreate(TaskResultBase):
-    model_config = ConfigDict(extra="forbid")
+    pass
+    # model_config = ConfigDict(extra="forbid")
 
 
 class TaskResultCreateInternal(TaskResultCreate):
@@ -37,12 +40,11 @@ class TaskResultCreateInternal(TaskResultCreate):
 
 
 class TaskResultUpdate(BaseModel):
-    date: Optional[date]
     solved: Optional[bool] = Field(default=False)
     time_solved: Optional[datetime] = None
     score: Optional[int] = Field(default=0, ge=0, le=10)
     hints_used: Optional[int] = Field(default=0, ge=0, le=5)
-    attempts_left: Optional[int] = Field(default=ATTEMPTS_PER_RESET)
+    attempts_left: Optional[int]
     attempts_reset: Optional[datetime] = None
 
 
@@ -59,3 +61,4 @@ class TaskResultDelete(BaseModel):
 class TaskResultWithAnswer(TaskResultRead):
     text: str
     msg: str
+    attempts: Optional[List[TaskAttemptRead]] = Field(default=list)
