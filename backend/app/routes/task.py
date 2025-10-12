@@ -19,7 +19,7 @@ from app.schemas.user_task_result import TaskResultWithAnswer
 from app.settings import settings
 from app.utils.input import string_washer
 from app.utils.task_utils import check_answer
-from app.utils.user_utils import get_current_user, get_or_create_task_result
+from app.utils.user_utils import get_current_user, get_or_create_task_result, get_current_superuser
 
 router = APIRouter()
 
@@ -28,11 +28,9 @@ router = APIRouter()
 async def post_task(
         request: Request,
         task: TaskCreate,
-        user: Annotated[dict, Depends(get_current_user)],
+        user: Annotated[dict, Depends(get_current_superuser)],
         db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> TaskAdminRead:
-    if not user["is_admin"]:
-        raise HTTPException(status_code=403)
 
     task_internal_dict = task.model_dump()
     task_internal_dict["author"] = user["username"]
@@ -54,11 +52,10 @@ async def patch_task(
         date: datetime.date,
         request: Request,
         values: TaskUpdate,
-        current_user: Annotated[dict, Depends(get_current_user)],
+        current_user: Annotated[dict, Depends(get_current_superuser)],
         db: Annotated[AsyncSession, Depends(async_get_db)],
 ) -> TaskAdminRead:
-    if not current_user["is_admin"]:
-        raise HTTPException(status_code=403)
+
 
     db_task = await crud_tasks.get(db=db, date=date, is_deleted=False)
     if db_task is None:
@@ -89,11 +86,10 @@ async def get_task_by_date(
 @router.delete("/{date}")
 async def delete_task(
         db: Annotated[AsyncSession, Depends(async_get_db)],
-        user: Annotated[dict, Depends(get_current_user)],
+        user: Annotated[dict, Depends(get_current_superuser)],
         date: datetime.date = datetime.date.today(),
 ):
-    if not user["is_admin"]:
-        raise HTTPException(status_code=403)
+
     if db_task := await crud_tasks.get(db=db, date=date):
         await crud_tasks.delete(db=db, id=db_task["id"])
         return {"message": "Task deleted"}

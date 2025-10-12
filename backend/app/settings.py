@@ -1,5 +1,5 @@
 import dotenv
-from os import environ
+from os import environ, path, getcwd, pardir
 
 from pydantic.v1 import BaseSettings
 from starlette.config import Config
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     ADMIN_USERNAME = get_env_var("ADMIN_USERNAME")
     ADMIN_EMAIL = get_env_var("ADMIN_EMAIL")
     ADMIN_PASSWORD = get_env_var("ADMIN_PASSWORD")
+
+    FILES_PATH = path.abspath(path.join(getcwd(), pardir, 'files'))
 
     ATTEMPTS_PER_RESET = 10
     SCORES_PER_HINT_USED = {

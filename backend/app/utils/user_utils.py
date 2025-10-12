@@ -40,6 +40,17 @@ async def get_current_user(
 
     raise credentials_exception
 
+async def get_current_superuser(
+        token: Annotated[str, Depends(oauth2_scheme)],
+        db: Annotated[AsyncSession, Depends(async_get_db)]
+) -> dict:
+    user = await get_current_user(token=token, db=db)
+    if not user["is_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    return user
+
 
 async def get_or_create_task_result(db: AsyncSession, user_id: int, task_id: int,
                                     date: datetime.date = datetime.date.today()) -> TaskResultRead:
@@ -78,6 +89,3 @@ async def get_or_create_task_result(db: AsyncSession, user_id: int, task_id: int
             )
     else:
         return TaskResultRead(**task_result)
-
-async def check_user_answer_attempt(db: AsyncSession, user_id: int, attempt_id: int, attempt_date: datetime.date):
-    pass
