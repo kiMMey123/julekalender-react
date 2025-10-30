@@ -25,6 +25,7 @@ class TaskMedia(TimestampSchema, PersistentDeletion, TaskMediaBase):
 
 
 class TaskMediaRead(TaskMediaBase):
+    id: int
     info: str
     file_name: str
     media_type: str

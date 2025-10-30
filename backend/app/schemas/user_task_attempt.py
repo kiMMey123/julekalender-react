@@ -19,7 +19,7 @@ class TaskAttempt(TimestampSchema, PersistentDeletion, TaskAttemptBase):
 
 class TaskAttemptRead(TaskAttemptBase):
     msg: str
-    created_at: datetime.datetime
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
 class TaskAttemptCreate(TaskAttemptBase):
     model_config = ConfigDict(extra="forbid")
@@ -31,6 +31,7 @@ class TaskAttemptCreateInternal(TaskAttemptCreate):
     user_id: int
     task_id: int
     task_result_id: int
+    # created_at: datetime.datetime
 
 
 class TaskAttemptUpdate(TaskAttemptCreate):

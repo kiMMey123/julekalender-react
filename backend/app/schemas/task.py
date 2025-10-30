@@ -74,7 +74,7 @@ class TaskCreate(TaskBase):
     answer_info: str
     answer_plaintext: str
     answer_regex: Optional[str] = Field(
-        pattern=r"^[a-zA-Z0-9]+$", default=None, examples=["^[a-zA-Z0-9]+$"] )
+        default=None, examples=["^tekst|text$"] )
 
 
 class TaskCreateInternal(TaskCreate):
@@ -151,6 +151,7 @@ class TaskDelete(BaseModel):
 
     is_deleted: bool
     deleted_at: datetime.datetime
+
 
 class TaskRead(TaskBase, TaskStatus, TaskTimeStamp):
     id: int

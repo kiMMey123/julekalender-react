@@ -57,8 +57,3 @@ class TaskResultDelete(BaseModel):
 
     is_deleted: bool
     deleted_at: datetime
-
-class TaskResultWithAnswer(TaskResultRead):
-    text: str
-    msg: str
-    attempts: Optional[List[TaskAttemptRead]] = Field(default=list)

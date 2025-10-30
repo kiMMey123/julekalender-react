@@ -1,8 +1,9 @@
 import datetime
-from typing import Annotated
+from typing import Annotated, Union
 
 from fastapi import HTTPException
 from fastapi.params import Depends
+from fastcrud.exceptions.http_exceptions import NotFoundException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -52,40 +53,34 @@ async def get_current_superuser(
     return user
 
 
-async def get_or_create_task_result(db: AsyncSession, user_id: int, task_id: int,
-                                    date: datetime.date = datetime.date.today()) -> TaskResultRead:
-
-    db_task = await crud_tasks.exists(db=db, id=task_id, is_deleted=False, schema_to_select=TaskRead)
+async def get_or_create_task_result(db: AsyncSession, user_id: int, task: Union[int, dict])-> TaskResultRead:
+    if type(task) is int:
+        db_task = await crud_tasks.get(db=db, id=task, is_deleted=False, schema_to_select=TaskRead)
+    else:
+        db_task = task
 
     if not db_task:
+        raise NotFoundException("Task Not Found")
+
+    task_result = await crud_users_results.get(db=db, user_id=user_id, task_id=db_task["id"], is_deleted=False,
+                                               )
+    if not task_result:
+        new_result = TaskResultCreateInternal(
+            date=db_task["date"],
+            user_id=user_id,
+            task_id=db_task["id"],
+        )
+        created_result = await crud_users_results.create(db=db, object=new_result)
+        result = await crud_users_results.get(db=db, id=created_result.id)
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to create task result",
+            )
+        return TaskResultRead(**result)
+    else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found",
+            detail="Task result not found",
         )
-
-    task_result = await crud_users_results.get(db=db, user_id=user_id, task_id=task_id, is_deleted=False,
-                                               schema_to_select=TaskResultRead)
-
-    if not task_result:
-        if date == datetime.date.today():
-            new_result = TaskResultCreateInternal(
-                date=date,
-                user_id=user_id,
-                task_id=task_id
-            )
-            created_result = await crud_users_results.create(db=db, object=new_result)
-            result = await crud_users_results.get(db=db, id=created_result.id, schema_to_select=TaskResultRead)
-
-            if not result:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Unable to create task result",
-                )
-            return TaskResultRead(**result)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Task result not found",
-            )
-    else:
-        return TaskResultRead(**task_result)

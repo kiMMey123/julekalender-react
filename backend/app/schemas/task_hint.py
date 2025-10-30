@@ -8,7 +8,6 @@ from app.schemas.task import TaskMediaRead
 from app.utils.encryption import enigma
 
 class TaskHintBase(BaseModel):
-    date: datetime.date
     info: str = Field(min_length=1, max_length=63206, examples=["Dette er et hint til oppgaven"]),
 
 
@@ -17,10 +16,11 @@ class TaskHint(TaskHintBase, TimestampSchema, PersistentDeletion):
 
 
 class TaskHintCreate(TaskHintBase):
-    pass
+    hint_number: int = Field(ge=0, le=5, default=0)
+
 
 class TaskHintCreateInternal(TaskHintCreate):
-    pass
+    date: datetime.date
 
 
 class TaskHintUpdate(BaseModel):
@@ -39,5 +39,6 @@ class TaskHintDelete(BaseModel):
 
 
 class TaskHintRead(TaskHintBase):
+    hint_number: int
     media: Optional[List[TaskMediaRead]]
 
