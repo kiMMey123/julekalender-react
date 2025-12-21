@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, HTTPException, Request
 from fastcrud.exceptions.http_exceptions import DuplicateValueException, NotFoundException
+from fastcrud.paginated import PaginatedListResponse, paginated_response, compute_offset
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
@@ -25,13 +26,6 @@ from app.schemas.user_task_result import TaskResultRead, TaskResultCreate, TaskR
 from app.utils.security import get_password_hash
 
 router = APIRouter()
-
-# @router.get("/scoreboard/today")
-# def get_daily_scoreboard(
-#         db: Annotated[AsyncSession, Depends(async_get_db)],
-# ):
-#     today = date.today()
-#     results =
 
 @router.get("/me", response_model=Optional[List[TaskResultRead]])
 async def get_my_results(
@@ -62,25 +56,50 @@ async def get_result(
     else:
         raise HTTPException(status_code=404, detail="User result not found")
 
-@router.get("/scoreboard")
+from sqlalchemy import select, func, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@router.get("/scoreboard", response_model=PaginatedListResponse[dict])
 async def get_scoreboard(
-        # user: Annotated[dict, Depends(get_current_user)],
-        db: Annotated[AsyncSession, Depends(async_get_db)],
-):
-    query = select(
-        TaskResult.user_id,
-        func.sum(TaskResult.score).label('total_score'),
-        func.sum(TaskResult.hints_used).label('total_hints_used')
-    ).group_by(TaskResult.user_id)
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    page: int = 1,
+    items_per_page: int = 50,
+) -> dict:
 
-    result = await db.execute(query)
+    total_score = func.sum(TaskResult.score).label("total_score")
+    total_hints_used = func.sum(TaskResult.hints_used).label("total_hints_used")
 
-    return [
+    base_query = (
+        select(
+            TaskResult.user_id.label("user_id"),
+            User.username.label("username"),
+            total_score,
+            total_hints_used,
+        )
+        .join(User, User.id == TaskResult.user_id)
+        .group_by(TaskResult.user_id, User.username)
+    )
+
+    ordered_query = base_query.order_by(desc(total_score), total_hints_used, User.username)
+
+    page_query = ordered_query.limit(items_per_page).offset(compute_offset(page, items_per_page))
+    page_result = await db.execute(page_query)
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_count = await db.scalar(count_query)
+
+    items = [
         {
             "user_id": row.user_id,
+            "username": row.username,
             "total_score": row.total_score,
-            "total_hints_used": row.total_hints_used
+            "total_hints_used": row.total_hints_used,
         }
-        for row in result.all()
+        for row in page_result.all()
     ]
-    return results
+
+    response = paginated_response(
+        crud_data={"data": items, "total_count": total_count},
+        page=page,
+        items_per_page=items_per_page,
+    )
+    return response
