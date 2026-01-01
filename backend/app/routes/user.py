@@ -1,29 +1,19 @@
-from datetime import date
+from typing import Annotated, cast, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
+from fastapi.params import Depends
 from fastcrud.exceptions.http_exceptions import DuplicateValueException, NotFoundException, ForbiddenException
 from fastcrud.paginated import PaginatedListResponse, compute_offset, paginated_response
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_tasks import crud_tasks
-from app.crud.crud_users_results import crud_users_results
-from app.database import async_get_db
-from app.utils.task_utils import get_current_task
-from app.schemas.task import Task, TaskRead
-from app.schemas.user import UserCreate, UserRead, UserCreateInternal, UserUpdate
-from app.models.user import User
-from app.utils.user_utils import get_current_user, get_or_create_task_result, get_current_superuser
 from app.crud.crud_users import crud_users
-from app.models.user_task_result import TaskResult
-
-from typing import Annotated, cast, Any
-from fastapi.params import Depends
-
-from app.schemas.user_task_result import TaskResultRead, TaskResultCreate, TaskResultCreateInternal
+from app.database import async_get_db
+from app.schemas.user import UserCreate, UserRead, UserCreateInternal, UserUpdate
 from app.utils.security import get_password_hash
+from app.utils.user_utils import get_current_user, get_current_superuser
 
 router = APIRouter()
+
 
 @router.post("", response_model=UserRead)
 async def create_user(
@@ -51,11 +41,13 @@ async def create_user(
 
     return cast(UserRead, user_read)
 
+
 @router.get("/me", response_model=UserRead)
 async def read_current_user(
-    current_user: Annotated[dict, Depends(get_current_user)]
+        current_user: Annotated[dict, Depends(get_current_user)]
 ):
     return current_user
+
 
 @router.get("", response_model=PaginatedListResponse[UserRead])
 async def read_users(

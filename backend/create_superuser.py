@@ -1,7 +1,7 @@
 import asyncio
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table, insert, select
+from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData, String, Table, insert, select
 
 from app.settings import settings
 from app.database import AsyncSession, async_engine, local_session

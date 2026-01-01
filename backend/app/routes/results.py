@@ -1,36 +1,26 @@
-from datetime import date, datetime
+from datetime import date
+from typing import Annotated, Optional, List
 
-from fastapi import APIRouter, HTTPException, Request
-from fastcrud.exceptions.http_exceptions import DuplicateValueException, NotFoundException
+from fastapi import APIRouter, HTTPException
+from fastapi.params import Depends
 from fastcrud.paginated import PaginatedListResponse, paginated_response, compute_offset
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select
 
 from app.crud.crud_tasks import crud_tasks
 from app.crud.crud_users_results import crud_users_results
 from app.database import async_get_db
-from app.utils.task_utils import get_current_task
-from app.schemas.task import Task, TaskRead
-from app.schemas.user import UserCreate, UserRead, UserCreateInternal
-from app.models.user_task_result import TaskResult
 from app.models.user import User
-from app.utils.user_utils import get_current_user, get_or_create_task_result
-from app.crud.crud_users import crud_users
 from app.models.user_task_result import TaskResult
-
-from typing import Annotated, cast, Optional, List
-from fastapi.params import Depends
-
-from app.schemas.user_task_result import TaskResultRead, TaskResultCreate, TaskResultCreateInternal
-from app.utils.security import get_password_hash
+from app.schemas.user_task_result import TaskResultRead
+from app.utils.user_utils import get_current_user, get_or_create_task_result
 
 router = APIRouter()
 
+
 @router.get("/me", response_model=Optional[List[TaskResultRead]])
 async def get_my_results(
-    user: Annotated[dict, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+        user: Annotated[dict, Depends(get_current_user)],
+        db: Annotated[AsyncSession, Depends(async_get_db)],
 ):
     user_results = await crud_users_results.get_multi(
         db=db,
@@ -38,6 +28,7 @@ async def get_my_results(
         user_id=user["id"],
         schema_to_select=TaskResultRead
     )
+
     return user_results["data"]
 
 
@@ -56,16 +47,17 @@ async def get_result(
     else:
         raise HTTPException(status_code=404, detail="User result not found")
 
+
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 @router.get("/scoreboard", response_model=PaginatedListResponse[dict])
 async def get_scoreboard(
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    page: int = 1,
-    items_per_page: int = 50,
+        db: Annotated[AsyncSession, Depends(async_get_db)],
+        page: int = 1,
+        items_per_page: int = 50,
 ) -> dict:
-
     total_score = func.sum(TaskResult.score).label("total_score")
     total_hints_used = func.sum(TaskResult.hints_used).label("total_hints_used")
 
