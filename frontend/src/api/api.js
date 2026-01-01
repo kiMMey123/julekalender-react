@@ -1,6 +1,8 @@
+import {getUserToken} from "@/utils/token.js";
+
 export const baseUrl = 'http://localhost:8000'
 
-export async function processApiRequest(endpoint, method, args) {
+export async function processApiRequest(endpoint, method, args, useToken) {
     const uri = `${baseUrl}/${endpoint}`;
 
     let urlWithParams = uri;
@@ -10,6 +12,11 @@ export async function processApiRequest(endpoint, method, args) {
             'Content-Type': 'application/json',
         },
     };
+
+    if (useToken) {
+        const userToken = getUserToken()
+        fetchOptions.headers.Authorization = `Bearer ${userToken.access_token}`;
+    }
 
     if (method === 'GET') {
         const queryParams = new URLSearchParams(args).toString();

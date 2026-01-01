@@ -8,27 +8,27 @@ import { fetchImage} from "./api/media.js";
 import LoginForm from "./views/login/LoginForm.jsx";
 import {ColorModeButton} from "@/components/ui/color-mode.jsx";
 import {getToken} from "@/api/login.js";
+import {setUserToken} from "@/utils/token.js";
+import {getUserData} from "@/api/user.js";
 
 // import './App.css'
 
 
 function App() {
     const [time, setTime] = useState(null)
-    const [img, setImg] = useState(null)
     const [user, setUser] = useState(null)
-    const [token, setToken] = useState(null)
 
 
     async function getTime() {
         const data = await processApiRequest('time', 'GET')
-
         setTime(data.time)
     }
 
     async function loginUser(formData) {
         try {
             await getToken(formData).then((data) => {
-                setToken(data)
+                setUserToken(data)
+                getUserData().then((data) => {setUser(data)})
             })
         } catch(e) {
             console.log(e)
@@ -37,8 +37,8 @@ function App() {
 
     useEffect(() => {
         setTime(getTime())
-        fetchImage("3beab014-33b1-460b-920c-c278466eb321.png").then((res) => {setImg(res)})
     }, [])
+
     return (
         <BrowserRouter>
             <ColorModeButton />
@@ -49,12 +49,8 @@ function App() {
                             <p>Benus aaa {time}</p>
 
                         </div>
-                        <div>
-                            <img src={img}  alt={"benus"}/>
 
-                        </div>
                     </AbsoluteCenter>
-
                 ) : (
                     <LoginForm
                         handleSubmit={loginUser}
